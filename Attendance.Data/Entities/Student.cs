@@ -115,39 +115,6 @@ namespace Attendance.Data.Entities
             Incomplete = 0,
             Complete = 1
         }
-
-        // -------- Convenient read-only properties for UI (optional) --------
-        // These use your PersianDateConverter helper (if present) to render the dates as "yyyy/MM/dd" shamsi.
-        // If you didn't add PersianDateConverter, these will return null / empty string — you can implement the converter as shown earlier.
-        //public string? BirthDateShamsi
-        //{
-        //    get
-        //    {
-        //        try
-        //        {
-        //            return PersianDateConverter.ToShamsiString(this.BirthDate);
-        //        }
-        //        catch
-        //        {
-        //            return null;
-        //        }
-        //    }
-        //}
-
-        //public string? EntryDateShamsi
-        //{
-        //    get
-        //    {
-        //        try
-        //        {
-        //            return PersianDateConverter.ToShamsiString(this.EntryDate);
-        //        }
-        //        catch
-        //        {
-        //            return null;
-        //        }
-        //    }
-        //}
     }
     public enum PaymentStatus : byte
     {
