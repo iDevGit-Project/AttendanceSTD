@@ -1,0 +1,84 @@
+﻿@using Attendance.Data.VModels.Students
+@model StudentListPagedViewModel
+
+<div class="p-6">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-bold">دانش‌آموزان</h1>
+            <p class="text-sm text-slate-500">نمایش فهرست دانش‌آموزان (صفحه @Model.Page از @Model.TotalPages)</p>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div class="text-sm">
+                <div>تعداد کل: <span class="font-bold">@Model.TotalCount</span></div>
+                <div>غیرفعال‌ها: <span class="font-bold text-rose-700">@Model.InactiveCount</span></div>
+            </div>
+
+            <form method="get" asp-action="ListPaged" class="flex items-center gap-2">
+                <input type="text" name="search" value="@Model.Search" placeholder="جستجو..." class="border rounded px-2 py-1 text-sm" />
+                <input type="hidden" name="pageSize" value="@Model.PageSize" />
+                <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">جستجو</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="bg-white rounded shadow overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-700">
+                <tr>
+                    <th class="p-3 text-left">عکس</th>
+                    <th class="p-3 text-left">نام</th>
+                    <th class="p-3 text-left">نام خانوادگی</th>
+                    <th class="p-3 text-left">کد ملی</th>
+                    <th class="p-3 text-left">مدرسه</th>
+                    <th class="p-3 text-left">پایه</th>
+                    <th class="p-3 text-left">مربی</th>
+                    <th class="p-3 text-left">وضعیت</th>
+                    <th class="p-3 text-center">عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Items.Any())
+                {
+                    <tr>
+                        <td colspan="9" class="p-6 text-center text-slate-500">
+                            داده‌ای یافت نشد. لطفاً معیار جستجو را تغییر دهید یا ابتدا دانش‌آموز جدید اضافه کنید.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var s in Model.Items)
+                    {
+                        @Html.Partial("_RowStudentPartial", s)  @* از partial موجود استفاده کن؛ اگر نامش چیز دیگری است نام را تغییر بده *@
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-4 flex items-center justify-between">
+        <div class="text-sm text-slate-600">
+            نمایش @(((Model.Page - 1) * Model.PageSize) + 1) تا @(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) از @Model.TotalCount
+        </div>
+
+        <div class="flex items-center gap-2">
+            <form method="get" asp-action="ListPaged" class="inline">
+                <input type="hidden" name="search" value="@Model.Search" />
+                <input type="hidden" name="pageSize" value="@Model.PageSize" />
+                <input type="hidden" name="page" value="@(Model.Page - 1)" />
+                <button type="submit" class="px-3 py-1 rounded border hover:bg-slate-100" @(Model.Page <= 1 ? "disabled" : "")>قبلی</button>
+            </form>
+
+            <div class="px-3 py-1 border rounded text-sm">صفحه @Model.Page از @Model.TotalPages</div>
+
+            <form method="get" asp-action="ListPaged" class="inline">
+                <input type="hidden" name="search" value="@Model.Search" />
+                <input type="hidden" name="pageSize" value="@Model.PageSize" />
+                <input type="hidden" name="page" value="@(Model.Page + 1)" />
+                <button type="submit" class="px-3 py-1 rounded border hover:bg-slate-100" @(Model.Page >= Model.TotalPages ? "disabled" : "")>بعدی</button>
+            </form>
+        </div>
+    </div>
+</div>

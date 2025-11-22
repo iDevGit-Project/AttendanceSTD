@@ -1,0 +1,32 @@
+﻿@model Attendance.Data.Entities.Student
+
+<div class="p-4">
+    <h3 class="text-lg font-semibold mb-2 text-rose-700">هشدار: حذف کامل</h3>
+    <p class="mb-4 text-sm text-slate-800">
+        این عملیات برگشت‌ناپذیر است. آیا از حذف کامل دانش‌آموز
+        <strong class="font-bold text-rose-900">@Model.FirstName @Model.LastName</strong>
+        و فایل‌های مرتبط (عکس) اطمینان دارید؟
+    </p>
+
+    <div class="mb-4 flex items-center gap-3">
+        <div class="w-20 h-20 rounded overflow-hidden border bg-slate-50 flex items-center justify-center flex-shrink-0">
+            <img src="@(Model.PhotoPath ?? "/uploads/students/default.png")" alt="عکس @Model.FirstName" class="object-cover" width="64" height="64" />
+        </div>
+        <div class="text-sm text-slate-700">
+            <div class="font-bold text-slate-700">نام : <span class="font-medium text-slate-700">@(Model.FirstName ?? "-")</span></div>
+            <div class="font-bold text-slate-700">نام خانوادگی : <span class="font-medium text-slate-700">@(Model.LastName ?? "-")</span></div>
+            <div class="font-bold text-slate-700">پایه تحصیلی : <span class="font-medium text-slate-700">@(Model.Grade ?? "-")</span></div>
+            <div class="font-bold text-slate-700">نام مدرسه/آموزشگاه/هنرستان : <span class="font-medium text-slate-700">@(Model.SchoolName ?? "-")</span></div>
+        </div>
+    </div>
+
+    <form id="hardDeleteStudentForm" method="post" asp-action="HardDeleteConfirmed">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+
+        <div class="flex items-center justify-center gap-2">
+            <button type="submit" class="px-2 py-2 rounded bg-rose-700 text-slate-100 text-sm hover:bg-rose-900 transition">حذف کامل و نهایی</button>
+            <button type="button" id="hardDeleteCancelBtn" class="px-2 py-2 rounded border text-sm hover:bg-slate-300 transition">انصراف و بازگشت</button>
+        </div>
+    </form>
+</div>

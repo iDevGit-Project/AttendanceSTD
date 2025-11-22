@@ -1,0 +1,27 @@
+﻿@{
+    ViewData["Title"] = "سامانه مدیریت دانش آموزان";
+}
+
+<div class="max-w-3xl mx-auto space-y-6">
+
+    <!-- کارت خوش آمدگویی -->
+    <div class="bg-white rounded-lg border border-dashed p-6 text-center space-y-4">
+        <h2 class="text-xl font-bold text-slate-800">خوش آمدید</h2>
+        <p class="text-sm text-slate-600">کاربر گرامی، جهت دسترسی به هر آیتم، دکمه مربوطه را کلیک نمایید.</p>
+
+        <div class="flex justify-center gap-4 flex-wrap">
+            <a class="inline-block bg-slate-500 text-white px-4 py-2 rounded hover:bg-slate-900 transition"
+               asp-area="" asp-controller="Students" asp-action="Index">
+                لیست کلیه دانش آموزان
+            </a>
+        </div>
+    </div>
+
+    <!-- هشدار نسخه آزمایشی -->
+    <div class="bg-amber-100/50 border border-dashed border-amber-200 text-amber-800 rounded-lg text-center p-4 space-y-2">
+        <h3 class="text-sm text-slate-900 font-bold">نسخه آزمایشی نرم‌افزار</h3>
+        <p class="text-sm text-slate-900 leading-relaxed">شما در حال کار با نسخه آزمایشی نرم‌افزار هستید.</p>
+        <hr class="border-amber-200" />
+        <p class="text-sm text-slate-800">در صورت بروز هرگونه مشکل، با شماره <span class="font-bold text-slate-900">09171279764</span> تماس بگیرید.</p>
+    </div>
+</div>

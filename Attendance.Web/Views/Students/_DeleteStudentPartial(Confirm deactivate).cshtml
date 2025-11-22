@@ -1,0 +1,16 @@
+﻿@model Attendance.Data.Entities.Student
+
+<div class="p-4">
+    <h3 class="text-lg font-semibold mb-2">غیرفعال‌سازی اطلاعات دانش‌آموز</h3>
+    <p class="mb-4 text-sm text-gray-600">آیا از غیرفعال‌سازی اطلاعات دانش‌آموز <strong>@Model.FirstName @Model.LastName</strong> مطمئن هستید؟</p>
+
+    <form id="deleteStudentForm" asp-action="DeletePartialConfirmed" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+
+        <div class="flex items-center justify-end gap-2">
+            <button type="button" id="deleteCancelBtn" class="px-4 py-2 border rounded">انصراف</button>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded">غیرفعال‌سازی</button>
+        </div>
+    </form>
+</div>

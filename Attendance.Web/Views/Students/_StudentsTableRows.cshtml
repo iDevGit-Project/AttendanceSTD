@@ -1,0 +1,9 @@
+﻿@model IEnumerable<Attendance.Data.VModels.StudentListItemViewModel>
+
+@* این partial فقط یک لیست می‌گیرد و برای هر دانش‌آموز RowPartial را رندر می‌کند.
+   توجه: RowPartial خودت را دست نزن. *@
+
+@foreach (var student in Model)
+{
+    @await Html.PartialAsync("RowPartial", student)
+}

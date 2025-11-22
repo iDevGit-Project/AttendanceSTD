@@ -1,0 +1,155 @@
+﻿<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - سامانه مدیریت دانش آموزان</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/output.css" asp-append-version="true" />
+    <!-- Dropzone CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dropzone@5.9.3/dist/min/dropzone.min.css" />
+</head>
+<body class ="bg-svg-grid bg-slate-50 min-h-screen text-gray-800 min-h-screen flex flex-col">
+    <!-- نوار بالا -->
+    <header class="w-full h-16 bg-white border-b px-6 flex items-center justify-between">
+        <!-- فقط موبایل -->
+        <div class="md:hidden flex items-center gap-2">
+            <button onclick="toggleMobileMenu()" class="bg-white p-2">
+                <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" stroke-width="2"
+                     viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+        <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+            <a asp-controller="Home" asp-action="Index" class="text-slate-800">خانه</a>
+            <a href="#" class="text-gray-500 hover:text-slate-800">گزارشات</a>
+            <a href="#" class="text-gray-500 hover:text-slate-800">آرشیو اطلاعات</a>
+        </nav>
+        <div class="text-sm text-gray-500">
+            کاربر جاری: <span class="font-semibold text-gray-800">سید محمد جعفری</span>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- سایدبار اصلی (فقط در md و بالاتر) -->
+        <aside class="hidden md:block w-64 bg-white border-l flex-shrink-0 overflow-y-auto">
+            <div class="p-4 border-b">
+                <div class="text-sm text-center font-bold text-slate-800">سیستم مدیریت دانش آموزان</div>
+            </div>
+            <nav class="p-4 space-y-1 text-sm">
+                <a asp-controller="Home" asp-action="Index" class="flex items-center justify-between px-3 py-2 rounded-md bg-blue-500 text-slate-100">
+                    <span>پیشخوان</span>
+                </a>
+                <a asp-controller="Students" asp-action="Index" class="block px-3 py-2 rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>لیست دانش آموزان</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>لیست حضور و غیاب</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>لیست مربیان</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>لیست کارگروه ها</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>گزارشات</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>آرشیو و بایگانی</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>مدیریت صورتجلسه ها</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>پیامک</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>مدیریت کاربران</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>تنظیمات سیستم</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>خروج از سیستم</span>
+                </a>
+@*                 <a asp-controller="#" asp-action="Create" class="block px-3 py-2 rounded-md text-slate-600 hover:bg-blue-100/70">ثبت ارزیابی جدید</a>
+                <a href="#" class="flex justify-between px-3 py-2 rounded-md text-slate-600 hover:bg-blue-100/70">آرشیو اطلاعات</a> *@
+            </nav>
+        </aside>
+
+        <!-- سایدبار موبایل (فقط منو) -->
+        <aside id="mobileSidebar"
+               class="fixed top-0 right-0 h-full w-64 bg-white border-l shadow-lg z-40 transform translate-x-full transition-transform duration-300 md:hidden">
+            <div class="p-4 border-b flex items-center justify-between">
+                <div class="text-sm font-semibold text-slate-800">سیستم مدیریت دانش آموزان</div>
+                <button onclick="toggleMobileMenu()" class="text-gray-500 hover:text-red-500">
+                    ✕
+                </button>
+            </div>
+            <nav class="p-4 space-y-1 text-sm">
+                <a asp-controller="Home" asp-action="Index" class="flex items-center justify-between px-3 py-2 rounded-md bg-blue-500 text-slate-100">
+                    <span>پیشخوان</span>
+                </a>
+                <a asp-controller="Students" asp-action="Index" class="block px-3 py-2 rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>لیست دانش آموزان</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>لیست حضور و غیاب</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>لیست مربیان</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>لیست کارگروه ها</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>گزارشات</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>آرشیو و بایگانی</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>مدیریت صورتجلسه ها</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>پیامک</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>مدیریت کاربران</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>تنظیمات سیستم</span>
+                </a>
+                <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
+                    <span>خروج از سیستم</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- محتوای مرکزی -->
+        <main class="flex-1 overflow-y-auto p-6">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="bg-white border-t text-center py-4 text-xs text-slate-400">
+        1404-2025 | کلیه حقوق سامانه محفوظ است. &copy;
+    </footer>
+
+    <script>
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById("mobileSidebar");
+            sidebar.classList.toggle("translate-x-full");
+        }
+    </script>
+    @await RenderSectionAsync("IndexStudentsScripts", required: false)
+    @await RenderSectionAsync("CreateStudentsScripts", required: false)
+    @await RenderSectionAsync("EditStudentsScripts", required: false)
+    @await RenderSectionAsync("DeleteSoftStudentsScripts", required: false)
+    @await RenderSectionAsync("ArchiveStudentsScripts", required: false)
+    @await RenderSectionAsync("DetailsStudentsScripts", required: false)
+    <script src="~/js/js_Animated/loader.js"></script>
+</body>
+</html>

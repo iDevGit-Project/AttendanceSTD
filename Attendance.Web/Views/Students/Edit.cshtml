@@ -1,0 +1,696 @@
+﻿@using Attendance.Data.Entities
+@model Attendance.Data.VModels.StudentEditViewModel
+
+@{
+    ViewData["Title"] = "ویرایش اطلاعات دانش‌آموز";
+}
+<div class="bg-white rounded-lg border p-6 space-y-4">
+    <div class="flex items-center justify-between gap-4">
+        <div>
+            <h2 class="text-xl font-bold text-slate-800">ویرایش اطلاعات دانش آموز : <span class="inline-block px-2 py-1 font-bold text-sm text-slate-800 bg-amber-300 rounded">@Model.FirstName @Model.LastName</span></h2>
+            <p class="text-sm text-slate-500">فرم ویرایش اطلاعات دانش آموز انتخاب شده در سیستم</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a asp-action="Index" asp-controller="Students" class="inline-block px-3 py-2 bg-slate-100 font-bold text-slate-800 rounded hover:bg-slate-200 transition">
+                انصراف و بازگشت
+            </a>
+        </div>
+    </div>
+    <hr class="border-slate-200">
+    <div>
+        <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">ویرایش اطلاعات دانش آموز</h2>
+    </div>
+    <div asp-validation-summary="ModelOnly" class="mb-4 text-sm text-rose-700"></div>
+    <form asp-action="Edit" asp-controller="Students" method="post" enctype="multipart/form-data" class="space-y-6 bg-white">
+        <input type="hidden" name="Id" value="@Model.Id" />
+        @Html.AntiForgeryToken()
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.RowVersion)
+        @Html.HiddenFor(m => m.PhotoPath)
+
+        <!-- Hidden fields to carry birth/entry parsed Y/M/D (برای datepicker/submit) -->
+        <!-- <<< اصلاح: مقداردهی اولیه با مقادیر مدل (اگر وجود داشته باشند) >>> -->
+        <input type="hidden" name="BirthYear" id="BirthYear" value="@(Model.BirthYear?.ToString() ?? "")" />
+        <input type="hidden" name="BirthMonth" id="BirthMonth" value="@(Model.BirthMonth?.ToString() ?? "")" />
+        <input type="hidden" name="BirthDay" id="BirthDay" value="@(Model.BirthDay?.ToString() ?? "")" />
+
+        <input type="hidden" name="EntryYear" id="EntryYear" value="@(Model.EntryYear?.ToString() ?? "")" />
+        <input type="hidden" name="EntryMonth" id="EntryMonth" value="@(Model.EntryMonth?.ToString() ?? "")" />
+        <input type="hidden" name="EntryDay" id="EntryDay" value="@(Model.EntryDay?.ToString() ?? "")" />
+
+        <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">
+            <div class="flex items-start gap-6">
+                <div class="flex-1">
+                    <div class="grid grid-cols-3 md:grid-cols-3 gap-4">
+                        <!-- FirstName -->
+                        <div>
+                            <label asp-for="FirstName" class="block text-sm font-bold text-slate-700"></label>
+                            <input asp-for="FirstName" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2" />
+                            <span asp-validation-for="FirstName" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                        <!-- LastName -->
+                        <div>
+                            <label asp-for="LastName" class="block text-sm font-bold text-slate-700"></label>
+                            <input asp-for="LastName" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2" />
+                            <span asp-validation-for="LastName" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                        <!-- BirthDate (Shamsi) -->
+                        <div>
+                            <label asp-for="BirthDateShamsi" class="block text-sm font-bold text-slate-700">تاریخ تولد (شمسی)</label>
+                            <input asp-for="BirthDateShamsi" id="BirthDateShamsi" type="text"
+                                   class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-teal-200"
+                                   placeholder="مثلاً 1389/02/25"
+                                   autocomplete="off" value="@Model.BirthDateShamsi" />
+                            <span asp-validation-for="BirthDateShamsi" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                        <!-- FatherName -->
+                        <div>
+                            <label asp-for="FatherName" class="block text-sm font-bold text-slate-700"></label>
+                            <input asp-for="FatherName" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2" />
+                            <span asp-validation-for="FatherName" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                        <!-- NationalCode -->
+                        <div>
+                            <label asp-for="NationalCode" class="block text-sm font-bold text-slate-700"></label>
+                            <input asp-for="NationalCode" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2" />
+                            <span asp-validation-for="NationalCode" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                        <!-- تاریخ ورود به طرح -->
+                        <div>
+                            <label asp-for="EntryDateShamsi" class="block text-sm font-bold text-slate-700">تاریخ ورود به طرح (شمسی)</label>
+                            <input asp-for="EntryDateShamsi" id="EntryDateShamsi" type="text"
+                                   class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-teal-200"
+                                   placeholder="مثلاً 1403/07/01" value="@Model.EntryDateShamsi"
+                                   autocomplete="off" />
+                            <span asp-validation-for="EntryDateShamsi" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                        <!-- SchoolName (span full) -->
+                        <div class="md:col-span-3">
+                            <label asp-for="SchoolName" class="block text-sm font-bold text-slate-700"></label>
+                            <input asp-for="SchoolName" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2" />
+                            <span asp-validation-for="SchoolName" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                        <!-- Grade -->
+                        <div>
+                            <label asp-for="Grade" class="block text-sm font-bold text-slate-700"></label>
+                            <input asp-for="Grade" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2" />
+                            <span asp-validation-for="Grade" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                        <!-- CoachName -->
+                        <div>
+                            <label asp-for="CoachName" class="block text-sm font-bold text-slate-700"></label>
+                            <input asp-for="CoachName" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2" />
+                            <span asp-validation-for="CoachName" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                        <!-- WorkgroupName -->
+                        <div>
+                            <label asp-for="WorkgroupName" class="block text-sm font-bold text-slate-700"></label>
+                            <input asp-for="WorkgroupName" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2" />
+                            <span asp-validation-for="WorkgroupName" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                        <!-- PaymentStatus -->
+                        <div>
+                            <label asp-for="PaymentStatus" class="block text-sm font-bold text-slate-700">وضعیت پرداخت</label>
+                            <select asp-for="PaymentStatus" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2">
+                                <option value="0">پرداخت نشده</option>
+                                <option value="1">پرداخت شده</option>
+                                <option value="2">در حال پرداخت</option>
+                            </select>
+                            <span asp-validation-for="PaymentStatus" class="text-rose-600 text-sm mt-1 block"></span>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">فرم های جاری دانش آموز</h2>
+        </div>
+        <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">
+            <div class="flex items-start gap-6">
+                <div class="flex-1">
+                    <div class="grid grid-cols-3 md:grid-cols-3 gap-4">
+                        <!-- FormStatus fields (selects) -->
+                        <div>
+                            <label asp-for="ConsentForm" class="block text-sm font-bold text-slate-700">فرم تعهدنامه</label>
+                            <select asp-for="ConsentForm" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2">
+                                <option value="0">تکمیل نشده</option>
+                                <option value="1">تکمیل شده</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label asp-for="StudentInterviewForm" class="block text-sm font-bold text-slate-700">فرم مصاحبه دانش‌آموز</label>
+                            <select asp-for="StudentInterviewForm" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2">
+                                <option value="0">تکمیل نشده</option>
+                                <option value="1">تکمیل شده</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label asp-for="ParentInterviewForm" class="block text-sm font-bold text-slate-700">فرم مصاحبه والدین</label>
+                            <select asp-for="ParentInterviewForm" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2">
+                                <option value="0">تکمیل نشده</option>
+                                <option value="1">تکمیل شده</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label asp-for="TalentTest" class="block text-sm font-bold text-slate-700">آزمون استعدادیابی</label>
+                            <select asp-for="TalentTest" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2">
+                                <option value="0">تکمیل نشده</option>
+                                <option value="1">تکمیل شده</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label asp-for="PsychologyForm" class="block text-sm font-bold text-slate-700">فرم روانشناسی</label>
+                            <select asp-for="PsychologyForm" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2">
+                                <option value="0">تکمیل نشده</option>
+                                <option value="1">تکمیل شده</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label asp-for="IQTest" class="block text-sm font-bold text-slate-700">آزمون هوش</label>
+                            <select asp-for="IQTest" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2">
+                                <option value="0">تکمیل نشده</option>
+                                <option value="1">تکمیل شده</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label asp-for="WarkTest" class="block text-sm font-bold text-slate-700">آزمون وارک</label>
+                            <select asp-for="WarkTest" class="mt-1 block w-full text-sm font-semibold rounded border bg-amber-100/70 px-3 py-2">
+                                <option value="0">تکمیل نشده</option>
+                                <option value="1">تکمیل شده</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">فعالسازی دانش آموز در سیستم</h2>
+        </div>
+        <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">
+            <div class="flex flex-wrap items-center gap-6">
+                <!-- فعال بودن دانش‌آموز -->
+                <div class="flex items-center gap-2">
+                    <input asp-for="IsActive" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                    <label asp-for="IsActive" class="text-sm text-slate-700 font-bold select-none">دانش‌آموز فعال باشد؟</label>
+                </div>
+            </div>
+        </div>
+        <div>
+            <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">ویرایش تصویر فعلی دانش آموز</h2>
+        </div>
+        <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">
+            <div class="flex flex-wrap items-center justify-center gap-6">
+                <!-- دکمه انتخاب تصویر -->
+                <div class="flex items-center gap-3">
+                    <!-- دکمه آپلود -->
+                    <label for="photoInput"
+                           class="cursor-pointer inline-flex items-center border px-4 py-2 text-slate-800 bg-slate-50 hover:bg-slate-200 text-sm font-bold rounded transition">
+                        انتخاب و بارگذاری تصویر
+                    </label>
+
+                    <!-- نام فایل -->
+                    <span id="fileName" class="text-sm text-slate-400">هیچ فایلی انتخاب نشده</span>
+
+                    <!-- ورودی فایل مخفی -->
+                    <input id="photoInput"
+                           asp-for="Photo"
+                           type="file"
+                           accept="image/*"
+                           class="hidden" />
+                </div>
+
+                <!-- پیش‌نمایش تصویر -->
+                <div class="flex items-center gap-2">
+                    <img id="photoPreview"
+                         src="@(string.IsNullOrEmpty(Model.PhotoPath) ? "/uploads/students/default.png" : Model.PhotoPath)"
+                         class="h-24 w-24 object-cover rounded-lg border"
+                         alt="student-photo" />
+                </div>
+
+                <!-- خطای اعتبارسنجی -->
+                <span asp-validation-for="Photo" class="text-rose-600 text-sm"></span>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex items-center justify-center gap-4 mt-6">
+            <div class="flex items-center gap-3">
+                <button type="submit" class="inline-block bg-green-600 text-slate-100 px-3 py-2 rounded hover:bg-green-700 transition">ویرایش و ثبت نهایی</button>
+            </div>
+            <div>
+                <a asp-action="Index" class="inline-block px-3 py-2 bg-slate-100 font-bold text-slate-800 rounded hover:bg-slate-200 transition">انصراف و بازگشت</a>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+@section EditStudentsScripts {
+    <script>
+        // ====== Preview تصویر ======
+        (function () {
+            const input = document.getElementById('photoInput');
+            const preview = document.getElementById('photoPreview');
+            if (!input || !preview) return;
+
+            input.addEventListener('change', function () {
+                const f = this.files && this.files[0];
+                if (!f) {
+                    preview.src = '/uploads/students/default.png';
+                    return;
+                }
+                if (!f.type.startsWith('image/')) {
+                    showLocalNotify('فایل انتخاب‌شده یک تصویر نیست.', 'error');
+                    this.value = '';
+                    return;
+                }
+                if (f.size > 2 * 1024 * 1024) {
+                    showLocalNotify('حجم تصویر بیش از حد مجاز است (حداکثر 2MB).', 'error');
+                    this.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (ev) => preview.src = ev.target.result;
+                reader.readAsDataURL(f);
+            });
+        })();
+
+        // ====== Notify با انیمیشن نرم ======
+        function showLocalNotify(message, type = 'success') {
+            if (window.showNotify) { try { window.showNotify(message, type); return; } catch (e) {} }
+
+            const c = document.createElement('div');
+            c.className = 'fixed top-6 left-1/2 -translate-x-1/2 z-[99999]';
+            const b = document.createElement('div');
+            b.className = (type === 'error')
+                ? 'bg-rose-600 text-white px-5 py-3 rounded shadow-lg transform transition-all duration-500 opacity-0 -translate-y-4'
+                : 'bg-green-500 text-white px-4 py-3 rounded shadow-lg transform transition-all duration-500 opacity-0 -translate-y-4';
+            b.textContent = message;
+            c.appendChild(b);
+            document.body.appendChild(c);
+
+            setTimeout(() => b.classList.remove('opacity-0', '-translate-y-4'), 50);
+            setTimeout(() => {
+                b.classList.add('opacity-0', '-translate-y-4');
+                setTimeout(() => c.remove(), 400);
+            }, 3000);
+        }
+
+        // ====== نمایش پیام TempData ======
+        (function () {
+            const success = '@(TempData["SuccessMessage"] ?? "")'.trim();
+            const error = '@(TempData["ErrorMessage"] ?? "")'.trim();
+            if (success) showLocalNotify(success, 'success');
+            else if (error) showLocalNotify(error, 'error');
+        })();
+    </script>
+    <script>
+        document.getElementById("photoInput").addEventListener("change", function (e) {
+            const fileName = e.target.files.length ? e.target.files[0].name : "هیچ فایلی انتخاب نشده";
+            document.getElementById("fileName").textContent = fileName;
+
+            if (e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (ev) {
+                    document.getElementById("photoPreview").src = ev.target.result;
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+    </script>
+    <style>
+        /* small styles for the floating picker */
+        .sh-datepicker {
+            position: absolute;
+            z-index: 999999;
+            background: white;
+            border: 1px solid rgba(15,23,42,0.06);
+            box-shadow: 0 8px 24px rgba(2,6,23,0.08);
+            padding: 10px;
+            border-radius: 8px;
+            min-width: 260px;
+            direction: rtl;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+            .sh-datepicker .row {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                margin-bottom: 8px;
+            }
+
+            .sh-datepicker select {
+                flex: 1;
+                padding: 6px 8px;
+                border-radius: 6px;
+                border: 1px solid #e5e7eb;
+                background: #fff;
+            }
+
+            .sh-datepicker .actions {
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+                margin-top: 6px;
+            }
+
+            .sh-datepicker button {
+                padding: 6px 10px;
+                border-radius: 6px;
+                border: 0;
+                cursor: pointer;
+                font-weight: 600;
+            }
+
+            .sh-datepicker .btn-ok {
+                background: #0ea5a0;
+                color: white;
+            }
+
+            .sh-datepicker .btn-cancel {
+                background: #f3f4f6;
+                color: #0f172a;
+            }
+    </style>
+    <script>
+        (function () {
+          // config: year range (shamsi)
+          const DEFAULT_YEAR_FROM = 1370;
+          const DEFAULT_YEAR_TO_OFFSET = 0; // offset from current shamsi year; 0 -> up to current year
+
+          // helpers
+          function pad(n){ return n < 10 ? '0' + n : String(n); }
+          function parseShamsiString(sh){
+            if (!sh) return null;
+            sh = sh.replace(/[\uFF0F\u2215]/g,'/').trim();
+            const m = sh.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+            if (!m) return null;
+            return { year: parseInt(m[1],10), month: parseInt(m[2],10), day: parseInt(m[3],10) };
+          }
+
+          // compute current shamsi year approx by using known mapping
+          function getCurrentShamsiYear() {
+            try {
+              const dt = new Date();
+              const s = dt.toLocaleDateString('fa-IR-u-nu-latn');
+              const digitsMap = {'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9'};
+              let latin = '';
+              for (let ch of s) latin += (digitsMap[ch] ?? ch);
+              const m = latin.match(/^(\d{4})[\/\-]/);
+              if (m) return parseInt(m[1],10);
+            } catch(e){}
+            const g = new Date();
+            const fallback = g.getFullYear() - 621;
+            return fallback;
+          }
+
+          function createPickerForInput(input, hiddenYear, hiddenMonth, hiddenDay, opts = {}) {
+            if (!input) return null;
+            let picker = null;
+
+            function build() {
+              if (picker) picker.remove();
+              picker = document.createElement('div');
+              picker.className = 'sh-datepicker hidden';
+              // year range
+              const currentShYear = getCurrentShamsiYear();
+              const yearFrom = opts.yearFrom ?? DEFAULT_YEAR_FROM;
+              const yearTo = opts.yearTo ?? (currentShYear + DEFAULT_YEAR_TO_OFFSET);
+
+              // elements
+              const row = document.createElement('div'); row.className = 'row';
+              const selY = document.createElement('select');
+              const selM = document.createElement('select');
+              const selD = document.createElement('select');
+
+              // populate years
+              for (let y = yearTo; y >= yearFrom; y--) {
+                const o = document.createElement('option'); o.value = y; o.text = y;
+                selY.appendChild(o);
+              }
+              // months 1..12
+              for (let m = 1; m <= 12; m++) {
+                const o = document.createElement('option'); o.value = m; o.text = (m + ' - ' + ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'][m-1]);
+                selM.appendChild(o);
+              }
+              // days 1..31
+              for (let d = 1; d <= 31; d++) {
+                const o = document.createElement('option'); o.value = d; o.text = pad(d);
+                selD.appendChild(o);
+              }
+
+              // prefill from input if possible
+              const cur = parseShamsiString(input.value);
+              if (cur) {
+                if (Array.from(selY.options).some(x=>x.value==cur.year)) selY.value = cur.year;
+                selM.value = cur.month;
+                selD.value = cur.day;
+              } else {
+                // use hidden values if present
+                const hy = hiddenYear && hiddenYear.value ? hiddenYear.value : null;
+                if (hy && Array.from(selY.options).some(x=>x.value==hy)) selY.value = hy;
+                if (hiddenMonth && hiddenMonth.value) selM.value = hiddenMonth.value;
+                if (hiddenDay && hiddenDay.value) selD.value = hiddenDay.value;
+              }
+
+              const rowwrap = document.createElement('div'); rowwrap.className = 'row';
+              rowwrap.appendChild(selY);
+              rowwrap.appendChild(selM);
+              rowwrap.appendChild(selD);
+
+              const actions = document.createElement('div'); actions.className = 'actions';
+              const ok = document.createElement('button'); ok.type='button'; ok.className='btn-ok'; ok.textContent='انتخاب';
+              const cancel = document.createElement('button'); cancel.type='button'; cancel.className='btn-cancel'; cancel.textContent='انصراف';
+
+              actions.appendChild(cancel);
+              actions.appendChild(ok);
+
+              picker.appendChild(rowwrap);
+              picker.appendChild(actions);
+
+              // add to body
+              document.body.appendChild(picker);
+
+              // position
+              const rect = input.getBoundingClientRect();
+              const top = rect.bottom + window.scrollY + 8;
+              const left = rect.left + window.scrollX;
+              picker.style.top = `${top}px`;
+              picker.style.left = `${left}px`;
+              picker.classList.remove('hidden');
+
+              // event handlers
+              function closePicker() { if (picker) { picker.remove(); picker = null; document.removeEventListener('click', onDocClick); } }
+              function onDocClick(e) {
+                if (!picker) return;
+                if (e.target === input) return;
+                if (picker.contains(e.target)) return;
+                closePicker();
+              }
+              // cancel
+              cancel.addEventListener('click', function(){ closePicker(); input.focus(); });
+              // ok -> write result to input and hidden fields
+              ok.addEventListener('click', function(){
+                const y = parseInt(selY.value,10);
+                const m = parseInt(selM.value,10);
+                const d = parseInt(selD.value,10);
+                input.value = `${y}/${pad(m)}/${pad(d)}`;
+                if (hiddenYear) hiddenYear.value = y;
+                if (hiddenMonth) hiddenMonth.value = m;
+                if (hiddenDay) hiddenDay.value = d;
+                // trigger input event
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                closePicker();
+                input.focus();
+              });
+
+              // click outside closes
+              setTimeout(()=>document.addEventListener('click', onDocClick), 50);
+            }
+
+            function showPicker() {
+              if (!picker) build(); else picker.classList.remove('hidden');
+            }
+
+            input.addEventListener('focus', showPicker);
+            input.addEventListener('click', function(e){ e.stopPropagation(); showPicker(); });
+            // if user manually types and leaves, sync hidden fields
+            input.addEventListener('blur', function () {
+              setTimeout(()=>{ // slight timeout so that OK click can run first
+                const cur = parseShamsiString(input.value);
+                if (cur) {
+                  if (hiddenYear) hiddenYear.value = cur.year;
+                  if (hiddenMonth) hiddenMonth.value = cur.month;
+                  if (hiddenDay) hiddenDay.value = cur.day;
+                }
+              }, 120);
+            });
+
+            return {
+              destroy: function () {
+                if (picker) picker.remove();
+              }
+            };
+          }
+
+          // attach datepickers to both birth and entry inputs if present
+          document.addEventListener('DOMContentLoaded', function(){
+            // birth
+            const birthInput = document.querySelector('input[name="BirthDateShamsi"], input[id="BirthDateShamsi"], input[asp-for="BirthDateShamsi"]');
+            const entryInput = document.querySelector('input[name="EntryDateShamsi"], input[id="EntryDateShamsi"], input[asp-for="EntryDateShamsi"]');
+
+            const hBirthY = document.getElementById('BirthYear');
+            const hBirthM = document.getElementById('BirthMonth');
+            const hBirthD = document.getElementById('BirthDay');
+
+            const hEntryY = document.getElementById('EntryYear');
+            const hEntryM = document.getElementById('EntryMonth');
+            const hEntryD = document.getElementById('EntryDay');
+
+            if (birthInput) {
+              createPickerForInput(birthInput, hBirthY, hBirthM, hBirthD, { yearFrom: 1370, yearTo: 1410 });
+            }
+            if (entryInput) {
+              createPickerForInput(entryInput, hEntryY, hEntryM, hEntryD, { yearFrom: 1370, yearTo: 1410 });
+            }
+
+            // Prefill inputs & hidden fields from model values (so Edit shows proper dates)
+            try {
+              // safer server-side injected strings
+              const by = '@(Model.BirthYear?.ToString() ?? "")';
+              const bm = '@(Model.BirthMonth?.ToString() ?? "")';
+              const bd = '@(Model.BirthDay?.ToString() ?? "")';
+              if (birthInput) {
+                if ((!birthInput.value || birthInput.value.trim() === '') && by && bm && bd) {
+                  // pad months/days
+                  const mm = String(bm).padStart(2,'0');
+                  const dd = String(bd).padStart(2,'0');
+                  birthInput.value = `${by}/${mm}/${dd}`;
+                }
+                if (hBirthY) hBirthY.value = by;
+                if (hBirthM) hBirthM.value = bm;
+                if (hBirthD) hBirthD.value = bd;
+              }
+
+              // Entry
+              const ey = '@(Model.EntryYear?.ToString() ?? "")';
+              const em = '@(Model.EntryMonth?.ToString() ?? "")';
+              const ed = '@(Model.EntryDay?.ToString() ?? "")';
+              if (entryInput) {
+                if ((!entryInput.value || entryInput.value.trim() === '') && ey && em && ed) {
+                  const mm2 = String(em).padStart(2,'0');
+                  const dd2 = String(ed).padStart(2,'0');
+                  entryInput.value = `${ey}/${mm2}/${dd2}`;
+                }
+                if (hEntryY) hEntryY.value = ey;
+                if (hEntryM) hEntryM.value = em;
+                if (hEntryD) hEntryD.value = ed;
+              }
+            } catch (ex) {
+              console.warn('prefill dates error', ex);
+            }
+          });
+        })();
+    </script>
+    <script>
+        (function () {
+          // ----- Utility: نمایش پیام با Swal (یک‌جا و با استایل مشابه بقیه) -----
+          function showSwalMessage(type, message, title) {
+            const icon = type === 'error' ? 'error' : (type === 'success' ? 'success' : 'info');
+            const defaultTitle = type === 'error' ? 'خطا' : (type === 'success' ? 'موفق' : 'اطلاع');
+            Swal.fire({
+              icon: icon,
+              title: title || defaultTitle,
+              text: message || '',
+              confirmButtonText: 'تأیید',
+              buttonsStyling: false,
+              customClass: {
+                confirmButton:
+                  type === 'success'
+                    ? "inline-block w-full justify-between gap-4 px-3 py-2 bg-green-600 text-sm text-slate-100 rounded hover:bg-green-700 transition mt-3"
+                    : type === 'error'
+                      ? "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-600 text-sm text-slate-100 rounded hover:bg-rose-700 transition mt-3"
+                      : "inline-block w-full justify-between gap-4 px-3 py-2 bg-pink-600 text-sm text-slate-100 rounded hover:bg-pink-700 transition mt-3"
+              }
+            });
+          }
+
+          // map showLocalNotify to Swal for consistency if needed
+          window.showLocalNotify = function (msg, type) {
+            if (type === 'error') showSwalMessage('error', msg);
+            else if (type === 'success') showSwalMessage('success', msg);
+            else showSwalMessage('info', msg);
+          };
+        })();
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // --- توابع کمکی برای تجزیه تاریخ شمسی ---
+            function parseShamsiDate(dateString) {
+                if (!dateString) return { y: '', m: '', d: '' };
+                const parts = dateString.split('/');
+                if (parts.length !== 3) return { y: '', m: '', d: '' };
+                return {
+                    y: parts[0],
+                    m: parts[1],
+                    d: parts[2]
+                };
+            }
+
+            // ========== تاریخ تولد ==========
+            const birthInput = document.getElementById('BirthDateShamsi');
+            if (birthInput) {
+                const birthParts = parseShamsiDate(birthInput.value);
+                document.getElementById('BirthYear').value = birthParts.y;
+                document.getElementById('BirthMonth').value = birthParts.m;
+                document.getElementById('BirthDay').value = birthParts.d;
+            }
+
+            // ========== تاریخ ورود ==========
+            const entryInput = document.getElementById('EntryDateShamsi');
+            if (entryInput) {
+                const entryParts = parseShamsiDate(entryInput.value);
+                document.getElementById('EntryYear').value = entryParts.y;
+                document.getElementById('EntryMonth').value = entryParts.m;
+                document.getElementById('EntryDay').value = entryParts.d;
+            }
+
+            // در صورت تغییر مقادیر ورودی، hiddenها نیز به‌روزرسانی شوند
+            ['BirthDateShamsi', 'EntryDateShamsi'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('change', function () {
+                    const p = parseShamsiDate(this.value);
+                    if (id === 'BirthDateShamsi') {
+                        document.getElementById('BirthYear').value = p.y;
+                        document.getElementById('BirthMonth').value = p.m;
+                        document.getElementById('BirthDay').value = p.d;
+                    } else {
+                        document.getElementById('EntryYear').value = p.y;
+                        document.getElementById('EntryMonth').value = p.m;
+                        document.getElementById('EntryDay').value = p.d;
+                    }
+                });
+            });
+        });
+    </script>
+}

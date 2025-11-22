@@ -1,0 +1,512 @@
+﻿@using Attendance.Data.Entities
+@model Attendance.Data.VModels.StudentListItemViewModel
+@{
+    ViewData["Title"] = "جزئیات دانش‌آموز";
+}
+<!-- کارت و هدر -->
+<div class="bg-white rounded-lg border p-6 space-y-4">
+    <div class="flex items-center justify-between gap-4">
+        <div>
+            <h2 class="text-xl font-bold text-slate-800 mb-3">نمایش جزئیات دانش آموز: <span class="inline-block px-2 py-1 font-bold text-sm text-slate-800 bg-blue-200 rounded">@Model.FirstName @Model.LastName</span></h2>
+        </div>
+        <div class="flex items-center gap-3">
+            <a asp-action="Edit" asp-controller="Students" asp-route-id="@Model.Id" class="inline-block bg-amber-100 text-slate-800 px-3 py-2 rounded hover:bg-amber-400 font-bold transition">
+                ویرایش اطلاعات
+            </a>
+            @if (Model.IsActive)
+            {
+                <form asp-controller="Students" asp-action="DeleteConfirmed" method="post" class="delete-form inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="Id" value="@Model.Id" />
+                    <input type="hidden" name="InactiveReason" class="inactive-reason-input" value="" />
+                    <button type="submit" class="student-delete-btn inline-block bg-rose-100/50 text-rose-700 px-4 py-2 rounded hover:bg-rose-200 font-bold transition"
+                            data-id="@Model.Id"
+                            data-name="@(Model.FirstName + " " + Model.LastName)">
+                        غیرفعالسازی دانش آموز
+                    </button>
+                </form>
+            }
+            else
+            {
+                <form asp-action="Restore" asp-controller="Students" method="post" class="inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition">فعال‌سازی مجدد</button>
+                </form>
+            }
+            <a asp-action="Index" asp-controller="Students" class="inline-block px-3 py-2 bg-slate-100 font-bold text-slate-800 rounded hover:bg-slate-200 transition">
+                بازگشت
+            </a>
+        </div>
+    </div>
+
+    <hr class="border-slate-200">
+    @* TempData notify *@
+    @if (TempData["SuccessMessage"] != null || TempData["ErrorMessage"] != null || TempData["Notify"] != null)
+    {
+        <div id="tempNotify" class="mb-2"></div>
+    }
+    <div>
+        <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">اطلاعات دانش آموز در سیستم</h2>
+    </div>
+    <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">
+        <div class="flex items-start gap-6">
+            <div class="w-36 flex-shrink-0">
+                <img src="@(Model.Photo ?? "/uploads/students/default.png")"
+                     alt="عکس @Model.FirstName @Model.LastName"
+                     class="h-24 w-24 object-cover rounded-lg border" />
+            </div>
+            <div class="flex-1">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        وضعیت دانش آموز در سیستم: <span>
+                            @if (Model.IsActive)
+                            {
+                                <span class="inline-block px-3 py-1 font-bold text-green-600 bg-green-100 rounded">فعال</span>
+                            }
+                            else
+                            {
+                                <span class="inline-block px-3 py-1 font-bold text-rose-800 bg-rose-100 rounded">غیرفعال</span>
+                            }
+                        </span>
+                    </p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">نام و نام خانوادگی: <span class="px-3 py-1 font-bold text-slate-800 bg-blue-100 rounded">@Model.FirstName @Model.LastName</span></p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        تاریخ تولد:
+                        <span class="px-3 py-1 font-bold text-slate-800 bg-blue-100 rounded">
+                            @(string.IsNullOrWhiteSpace(Model.BirthDateShamsi)
+                                                        ? "ثبت نشده"
+                                                        : Model.BirthDateShamsi)
+                        </span>
+                    </p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        تاریخ ورود به طرح:
+                        <span class="px-3 py-1 font-bold text-slate-800 bg-blue-100 rounded">
+                            @(string.IsNullOrWhiteSpace(Model.EntryDateShamsi)
+                                                        ? "ثبت نشده"
+                                                        : Model.EntryDateShamsi)
+                        </span>
+                    </p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">پایه تحصیلی: <span class="px-3 py-1 font-bold text-slate-800 bg-blue-100 rounded">@Model.Grade</span></p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">نام مدرسه: <span class="px-3 py-1 font-bold text-slate-800 bg-blue-100 rounded">@Model.SchoolName</span></p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">نام مربی: <span class="px-3 py-1 font-bold text-slate-800 bg-blue-100 rounded">@Model.CoachName</span></p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        وضعیت پرداخت شهریه:
+                        <span>
+                            @if (Model.PaymentStatus != null)
+                            {
+                                switch (Model.PaymentStatus)
+                                {
+                                    case PaymentStatus.Paid:
+                                        <span class="inline-block px-3 py-1 font-bold text-emerald-700 text-teal-800 bg-teal-100 rounded">پرداخت شده</span>
+                                        break;
+                                    case PaymentStatus.InProgress:
+                                        <span class="inline-block px-3 py-1 font-bold text-amber-500 bg-amber-100 rounded">در حال پرداخت</span>
+                                        break;
+                                    case PaymentStatus.Unpaid:
+                                        <span class="inline-block px-3 py-1 font-bold text-rose-700 bg-rose-100 rounded">پرداخت نشده</span>
+                                        break;
+                                    default:
+                                        <span class="inline-block px-3 py-1 font-bold text-slate-700 bg-slate-100 rounded">ثبت نشده</span>
+                                        break;
+                                }
+                            }
+                            else
+                            {
+                                <span class="inline-block px-3 py-1 font-bold text-slate-700 bg-slate-100 rounded">ثبت نشده</span>
+                            }
+                        
+                        </span>
+                    </p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        علت غیرفعال‌سازی:
+                        @if (!string.IsNullOrWhiteSpace(Model.InactiveReason))
+                        {
+                            <span class="px-3 py-1 font-bold text-rose-800 bg-rose-100 rounded">@Model.InactiveReason</span>
+                        }
+                        else
+                        {
+                            <span class="px-3 py-1 font-bold text-slate-800 bg-blue-100 rounded">ثبت نشده</span>
+                        }
+
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div>
+            <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">وضعیت فرم های دانش آموز</h2>
+        </div>
+        <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">
+            <div class="flex-1">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                    <!-- نمایش داده های لیست های کشویی-->
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        فرم تعهدنامه:
+                        <span class="px-3 py-1 font-bold rounded
+                            @(Model.ConsentForm == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
+                            @(Model.ConsentForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                        </span>
+                    </p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        فرم مصاحبه دانش‌آموز:
+                        <span class="px-3 py-1 font-bold rounded
+                            @(Model.StudentInterviewForm == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
+                            @(Model.StudentInterviewForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                        </span>
+                    </p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        فرم مصاحبه والدین:
+                        <span class="px-3 py-1 font-bold rounded
+                            @(Model.ParentInterviewForm == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
+                            @(Model.ParentInterviewForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                        </span>
+                    </p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        آزمون استعدادیابی:
+                        <span class="px-3 py-1 font-bold rounded
+                            @(Model.TalentTest == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
+                            @(Model.TalentTest == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                        </span>
+                    </p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        فرم روانشناسی:
+                        <span class="px-3 py-1 font-bold rounded
+                            @(Model.PsychologyForm == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
+                            @(Model.PsychologyForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                        </span>
+                    </p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        آزمون هوش:
+                        <span class="px-3 py-1 font-bold rounded
+                            @(Model.IQTest == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
+                            @(Model.IQTest == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                        </span>
+                    </p>
+                    <p class="text-sm font-bold text-slate-800 mb-3">
+                        آزمون وارک:
+                        <span class="px-3 py-1 font-bold rounded
+                            @(Model.WarkTest == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
+                            @(Model.WarkTest == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section DetailsStudentsScripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Swal اسکریپت مدیریت غیرفعالسازی اطلاعات دانش آموز با کامپوننت  -->
+    <script>
+        // ========== نمایش TempData.Notify (فقط در این صفحه: Index) ==========
+        (function showTempDataNotifyOnIndex() {
+            try {
+                // اگر کنترلر TempData["Notify"] را به صورت JSON قرار داده باشد، آن را بخوان
+                const rawNotify = @Html.Raw(TempData["Notify"] ?? "null");
+                if (rawNotify) {
+                    let payload = null;
+                    if (typeof rawNotify === 'string') {
+                        try { payload = JSON.parse(rawNotify); } catch { payload = rawNotify; }
+                    } else {
+                        payload = rawNotify;
+                    }
+
+                    if (payload) {
+                        const type = (payload.Type || payload.type || 'info').toString().toLowerCase();
+                        const title = payload.Title || payload.title || (type === 'success' ? 'عملیات با موفقیت انجام شد.' : (type === 'error' ? 'خطا' : 'اطلاع'));
+                        const message = payload.Message || payload.message || String(payload);
+                        const icon = type === 'success' ? 'success' : (type === 'error' ? 'error' : 'info');
+                        Swal.fire({
+                            icon,
+                            title,
+                            text: message,
+                            confirmButtonText: 'قبول و بازگشت',
+                            buttonsStyling: false,
+                            customClass: {
+                                confirmButton:
+                                    type === 'success'
+                                        ? "inline-block w-full justify-between gap-4 px-3 py-2 bg-green-600 text-sm text-slate-100 rounded hover:bg-green-700 transition mt-3"
+                                        : type === 'error'
+                                        ? "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-600 text-sm text-slate-100 rounded hover:bg-rose-700 transition mt-3"
+                                        : "inline-block w-full justify-between gap-4 px-3 py-2 bg-pink-600 text-sm text-slate-100 rounded hover:bg-pink-700 transition mt-3"
+                            }
+                        });
+                        return;
+                    }
+                }
+            } catch (ex) {
+                // اگر parse خطا داد، نادیده بگیر (نگذار کرش کنه)
+                console.warn('Error parsing TempData.Notify on Index', ex);
+            }
+
+        // fallback: اگر TempData["SuccessMessage"] یا TempData["ErrorMessage"] وجود داشته باشد
+        try {
+            const success = '@(TempData["SuccessMessage"] ?? "")'.trim();
+            const error = '@(TempData["ErrorMessage"] ?? "")'.trim();
+
+            if (success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'عملیات با موفقیت انجام شد.',
+                    text: success,
+                    confirmButtonText: 'تأیید و بازگشت',
+                    buttonsStyling: false, // غیرفعال کردن استایل پیش‌فرض SweetAlert2
+                    customClass: {
+                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-green-600 text-sm text-slate-100 rounded hover:bg-green-700 transition mt-3"
+                    }
+                });
+            } else if (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'متأسفم... عملیات با خطا مواجه شد.',
+                    text: error,
+                    confirmButtonText: 'قبول و بازگشت',
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-600 text-sm text-slate-100 rounded hover:bg-rose-700 transition mt-3"
+                    }
+                });
+            }
+        } catch (ex) {
+            console.warn('Error reading TempData Success/Error on Index', ex);
+        }
+        })();
+
+        // ========== مدیریت کلیک روی دکمه حذف نرم (student-delete-btn) ==========
+        document.addEventListener('click', function (e) {
+            if (!e.target) return;
+            const btn = e.target.closest('.student-delete-btn');
+            if (!btn) return;
+
+            e.preventDefault();
+
+            const form = btn.closest('form.delete-form');
+            if (!form) {
+                console.warn('No matching delete form found for id', btn.dataset.id);
+                return;
+            }
+
+            const studentName = btn.dataset.name || 'این دانش‌آموز';
+
+            // مرحله ۱: درخواست دلیل غیرفعال‌سازی
+            Swal.fire({
+                title: 'دلیل غیرفعال‌سازی',
+                html: `دلیل غیرفعال کردن دانش آموز: (<strong class="text-rose-700">${studentName}</strong>) را وارد کنید:`,
+                input: 'text',
+                inputPlaceholder: 'مثلاً انتقال به مدرسه دیگر',
+                inputAttributes: {
+                    dir: 'rtl',
+                    style: 'text-align:right',
+                },
+                allowOutsideClick: false,
+                animation: true,
+                allowEscapeKey: true,
+                showCancelButton: true,
+                buttonsStyling: false,
+                cancelButtonText: 'انصراف',
+                confirmButtonText: 'تأیید و ادامه',
+                customClass: {
+                    cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+                    confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-green-600 text-sm text-slate-100 rounded hover:bg-green-700 transition mt-3",
+                },
+                reverseButtons: true,
+                preConfirm: (value) => {
+                    if (!value || !value.trim()) {
+                        Swal.showValidationMessage(`<div class="text-rose-600 text-sm font-bold px-3 py-1 rounded">لطفاً دلیل غیرفعالسازی اطلاعات این دانش آموز را وارد نمایید.</div>`);
+                    }
+                    return value ? value.trim() : '';
+                }
+            }).then(result => {
+                if (!result.isConfirmed) return;
+
+                const reason = result.value;
+                const input = form.querySelector('.inactive-reason-input');
+                if (!input) {
+                    console.warn('inactive reason input not found in form for id', btn.dataset.id);
+                    return;
+                }
+                input.value = reason;
+
+                // مرحله ۲: تأیید نهایی قبل از ارسال
+                Swal.fire({
+                    title: 'آیا مطمئن هستید؟',
+                    text: `دانش‌آموز ${studentName} غیرفعال خواهد شد.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'بله، غیرفعال شود',
+                    cancelButtonText: 'خیر، انصراف',
+                    customClass: {
+                        cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-600 text-sm text-slate-100 rounded hover:bg-rose-700 transition mt-3",
+                    },
+                    reverseButtons: true
+                }).then(confirmResult => {
+                    if (confirmResult.isConfirmed) {
+
+                        // مرحله ۳: نمایش لودینگ هنگام ارسال
+                        Swal.fire({
+                            title: 'در حال غیرفعال‌سازی...',
+                            text: 'لطفاً چند لحظه صبر کنید',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                                form.submit();
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+
+    <style>
+        .swal2-validation-message {
+            background: #fff1f2; /* معادل Tailwind bg-rose-50 */
+            color: #9f1239; /* معادل تقریبی text-rose-700 */
+            padding: 0.5rem 1rem; /* px-4 py-2 */
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem; /* mt-3 */
+            font-size: 0.875rem; /* text-sm */
+            direction: rtl;
+            text-align: right;
+            box-shadow: none;
+            white-space: normal;
+            word-break: break-word;
+        }
+    </style>
+    <script>
+        (function () {
+            // ----- helper: parse "YYYY/MM/DD" -> {year,month,day} or null -----
+            function parseShamsiString(sh) {
+                if (!sh) return null;
+                sh = String(sh).trim().replace(/[\uFF0F\u2215]/g, '/');
+                const m = sh.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+                if (!m) return null;
+                const y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+                if (isNaN(y) || isNaN(mo) || isNaN(d)) return null;
+                if (mo < 1 || mo > 12) return null;
+                if (d < 1 || d > 31) return null;
+                return { year: y, month: mo, day: d };
+            }
+
+            // ----- on DOM ready: initialize inputs + hidden fields + datepickers if available -----
+            document.addEventListener('DOMContentLoaded', function () {
+                // inputs (text)
+                const birthInput = document.querySelector('input[name="BirthDateShamsi"], input[asp-for="BirthDateShamsi"], input[id="BirthDateShamsi"]');
+                const entryInput = document.querySelector('input[name="EntryDateShamsi"], input[asp-for="EntryDateShamsi"], input[id="EntryDateShamsi"]');
+
+                // hidden Y/M/D
+                const hBirthY = document.getElementById('BirthYear');
+                const hBirthM = document.getElementById('BirthMonth');
+                const hBirthD = document.getElementById('BirthDay');
+
+                const hEntryY = document.getElementById('EntryYear');
+                const hEntryM = document.getElementById('EntryMonth');
+                const hEntryD = document.getElementById('EntryDay');
+
+                // ----- fill hidden fields from server-rendered model values if present -----
+                // Note: Razor will inject numbers or empty; use null-coalescing to avoid "undefined"
+                try {
+                    // Birth from Model (if your ViewModel has BirthYear/BirthMonth/BirthDay)
+
+
+                    if (hBirthY && serverBirthY !== "null") hBirthY.value = serverBirthY;
+                    if (hBirthM && serverBirthM !== "null") hBirthM.value = serverBirthM;
+                    if (hBirthD && serverBirthD !== "null") hBirthD.value = serverBirthD;
+                } catch (ex) {
+                    // ignore if model properties not present
+                }
+
+                try {
+
+
+                    if (hEntryY && serverEntryY !== "null") hEntryY.value = serverEntryY;
+                    if (hEntryM && serverEntryM !== "null") hEntryM.value = serverEntryM;
+                    if (hEntryD && serverEntryD !== "null") hEntryD.value = serverEntryD;
+                } catch (ex) {
+                    // ignore if model properties not present
+                }
+
+                // ----- ensure visible text inputs show initial strings from server model if available -----
+                try {
+                    const svBirthText = '@(Model.BirthDateShamsi ?? "")';
+                    if (birthInput && (!birthInput.value || birthInput.value.trim() === '') && svBirthText && svBirthText.trim() !== '') {
+                        birthInput.value = svBirthText;
+                    }
+
+                    const svEntryText = '@(Model.EntryDateShamsi ?? "")';
+                    if (entryInput && (!entryInput.value || entryInput.value.trim() === '') && svEntryText && svEntryText.trim() !== '') {
+                        entryInput.value = svEntryText;
+                    }
+                } catch (ex) { /* ignore */ }
+
+                // ----- If the floating picker builder from Create is available, attach it so UI matches Create -----
+                // createPickerForInput is expected to be defined by the Create partial's script (same name).
+                // If present, call it for both inputs with the proper hidden fields.
+                try {
+                    if (typeof createPickerForInput === 'function') {
+                        if (birthInput) createPickerForInput(birthInput, hBirthY, hBirthM, hBirthD, { yearFrom: 1370, yearTo: 1410 });
+                        if (entryInput) createPickerForInput(entryInput, hEntryY, hEntryM, hEntryD, { yearFrom: 1370, yearTo: 1410 });
+                    }
+                } catch (ex) {
+                    console.warn('Error attaching createPickerForInput on Edit page', ex);
+                }
+
+                // ----- On form submit: ensure hidden fields are populated from visible inputs (fallback parsing) -----
+                const form = document.querySelector('form[asp-action="Edit"], form[action*="/Students/Edit"]') || document.querySelector('form');
+                if (form) {
+                    form.addEventListener('submit', function (ev) {
+                        // populate birth hidden fields
+                        if (birthInput && birthInput.value && birthInput.value.trim() !== '') {
+                            const p = parseShamsiString(birthInput.value.trim());
+                            if (p) {
+                                if (hBirthY) hBirthY.value = p.year;
+                                if (hBirthM) hBirthM.value = p.month;
+                                if (hBirthD) hBirthD.value = p.day;
+                            } else {
+                                // invalid format -> prevent submit and show warning like Create
+                                ev.preventDefault();
+                                ev.stopImmediatePropagation();
+                                if (window.showLocalNotify) window.showLocalNotify('فرمت تاریخ تولد نامعتبر است — از قالب YYYY/MM/DD استفاده کنید (مثال: 1389/02/25).', 'error');
+                                else alert('فرمت تاریخ تولد نامعتبر است — از قالب YYYY/MM/DD استفاده کنید (مثال: 1389/02/25).');
+                                if (birthInput) birthInput.focus();
+                                return false;
+                            }
+                        } else {
+                            // clear hidden if empty
+                            if (hBirthY) hBirthY.value = '';
+                            if (hBirthM) hBirthM.value = '';
+                            if (hBirthD) hBirthD.value = '';
+                        }
+
+                        // populate entry hidden fields
+                        if (entryInput && entryInput.value && entryInput.value.trim() !== '') {
+                            const p2 = parseShamsiString(entryInput.value.trim());
+                            if (p2) {
+                                if (hEntryY) hEntryY.value = p2.year;
+                                if (hEntryM) hEntryM.value = p2.month;
+                                if (hEntryD) hEntryD.value = p2.day;
+                            } else {
+                                ev.preventDefault();
+                                ev.stopImmediatePropagation();
+                                if (window.showLocalNotify) window.showLocalNotify('فرمت تاریخ ورود به طرح نامعتبر است — از قالب YYYY/MM/DD استفاده کنید (مثال: 1403/07/01).', 'error');
+                                else alert('فرمت تاریخ ورود به طرح نامعتبر است — از قالب YYYY/MM/DD استفاده کنید (مثال: 1403/07/01).');
+                                if (entryInput) entryInput.focus();
+                                return false;
+                            }
+                        } else {
+                            if (hEntryY) hEntryY.value = '';
+                            if (hEntryM) hEntryM.value = '';
+                            if (hEntryD) hEntryD.value = '';
+                        }
+
+                        // allow submit to continue
+                        return true;
+                    }, { passive: false });
+                }
+            });
+        })();
+    </script>
+}

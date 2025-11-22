@@ -1,0 +1,143 @@
+﻿@using Attendance.Data.VModels
+@model IEnumerable<StudentListItemViewModel>
+@{
+    ViewData["Title"] = "آرشیو دانش‌آموزان";
+}
+<!-- کارت و هدر -->
+<div class="bg-white rounded-lg border p-6 space-y-4">
+    <div class="flex items-center justify-between gap-4">
+        <div>
+            <h2 class="text-xl font-bold text-slate-800 mb-3">آرشیو دانش‌آموزان (غیرفعال‌ها)</h2>
+            <p class="text-sm text-slate-500">اطلاعات دانش آموزان غیرفعال در سیستم</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a asp-action="Index" asp-controller="Students" class="inline-block px-3 py-2 bg-slate-100 font-bold text-slate-800 rounded hover:bg-slate-200 transition">
+                بازگشت به لیست دانش آموزان
+            </a>
+        </div>
+    </div>
+    @* نمایش پیام‌های TempData *@
+    <div id="archiveNotify" class="mb-4"></div>
+    <hr class="border-slate-200">
+    <div>
+        <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-rose-700 bg-rose-100">جدول اطلاعات دانش آموزان غیرفعال در سیستم</h2>
+    </div>
+    <div class="bg-slate-100/50 text-slate-700 rounded-lg border border-dashed">
+        <div class="flex-1">
+            <table class="min-w-full divide-y divide-rose-100/50">
+                <thead class="text-rose-700">
+                    <tr>
+                        <th class="px-3 py-3 align-middle text-right text-sm font-bold">عکس</th>
+                        <th class="px-3 py-3 align-middle text-center text-sm font-bold">نام</th>
+                        <th class="px-3 py-3 align-middle text-center text-sm font-bold">کد ملی</th>
+                        <th class="px-3 py-3 align-middle text-center text-sm font-bold">مدرسه</th>
+                        <th class="px-3 py-3 align-middle text-center text-sm font-bold">پایه</th>
+                        <th class="px-3 py-3 align-middle text-center text-sm font-bold">علت غیرفعال‌سازی</th>
+                        <th class="px-3 py-3 align-middle text-center text-sm font-bold">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model)
+                    {
+                        <tr class="text-slate-700">
+                            <td class="px-3 py-3 align-middle text-right text-sm font-bold text-slate-700">
+                                <img src="@s.Photo" alt="photo" class="w-10 h-10 object-cover rounded border" />
+                            </td>
+                            <td class="px-3 py-3 align-middle text-center text-sm font-bold text-slate-700">@s.FirstName @s.LastName</td>
+                            <td class="px-3 py-3 align-middle text-center text-sm font-bold text-slate-700">@s.NationalCode</td>
+                            <td class="px-3 py-3 align-middle text-center text-sm font-bold text-slate-700">@s.SchoolName</td>
+                            <td class="px-3 py-3 align-middle text-center text-sm font-bold text-slate-700">@s.Grade</td>
+                            <td class="px-3 py-3 align-middle text-center text-sm font-bold text-slate-700 max-w-xs break-words">@(!string.IsNullOrWhiteSpace(s.InactiveReason) ? s.InactiveReason : "-")</td>
+                            <td class="px-3 py-3 align-middle text-center text-sm font-bold text-slate-700">
+                                <form asp-action="Restore" method="post" class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@s.Id" />
+                                    <button type="submit"
+                                            class="inline-block px-3 py-2 bg-green-600 text-slate-100 rounded hover:bg-green-700 transition">
+                                        فعال‌سازی مجدد
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section ArchiveStudentsScripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function () {
+            // Attach submit interception for Restore forms on the archive table
+            function initRestoreForms() {
+                // select forms whose action contains 'Restore' (covers generated /Students/Restore)
+                const forms = Array.from(document.querySelectorAll('form')).filter(f => {
+                    try {
+                        const a = f.getAttribute('action') || '';
+                        return a.indexOf('Restore') !== -1 || a.endsWith('/Restore') || a.includes('/Restore');
+                    } catch { return false; }
+                });
+
+                forms.forEach(form => {
+                    // ensure we don't attach twice
+                    if (form.dataset.restoreAttached === '1') return;
+                    form.dataset.restoreAttached = '1';
+
+                    form.addEventListener('submit', function (ev) {
+                        ev.preventDefault();
+
+                        // find a sensible name to show in dialog: try tr -> second td or hidden inputs
+                        const tr = form.closest('tr');
+                        let studentName = 'این دانش‌آموز';
+                        if (tr) {
+                            const tds = tr.querySelectorAll('td');
+                            if (tds.length >= 2) {
+                                const nameText = (tds[1].textContent || '').trim();
+                                if (nameText) studentName = nameText;
+                            }
+                        }
+
+                        // confirmation with Swal
+                        Swal.fire({
+                            title: 'آیا مطمئن هستید؟',
+                            html: `اطلاعات دانش آموز: (<strong class="text-green-700">${studentName}</strong>) فعال خواهد شد.`,
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'بله، فعال‌سازی شود',
+                            cancelButtonText: 'خیر، انصراف',
+                            customClass: {
+                                cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+                                confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-green-600 text-sm text-slate-100 rounded hover:bg-green-700 transition mt-3",
+                            },
+                            reverseButtons: true
+                        }).then(result => {
+                            if (!result.isConfirmed) return;
+
+                            // show loading Swal and submit form
+                            Swal.fire({
+                                title: 'در حال فعال‌سازی...',
+                                text: 'لطفاً چند لحظه صبر کنید',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                    // submit after a tiny delay to allow loading UI to render
+                                    setTimeout(() => form.submit(), 50);
+                                }
+                            });
+                        });
+                    });
+                });
+            }
+
+            // init on DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initRestoreForms);
+            } else {
+                initRestoreForms();
+            }
+        })();
+    </script>
+}
+

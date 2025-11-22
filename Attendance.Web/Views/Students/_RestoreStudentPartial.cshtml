@@ -1,0 +1,28 @@
+﻿@model Attendance.Data.Entities.Student
+
+<div class="p-4">
+    <h3 class="text-lg font-semibold mb-2">فعالسازی مجدد اطلاعات دانش‌آموز</h3>
+
+    <div class="mb-3 text-sm text-gray-700">
+        لطفاً تأیید کنید که می‌خواهید دانش‌آموز زیر را دوباره فعال کنید:
+    </div>
+
+    <div class="mb-4">
+        <div class="text-sm"><strong>نام:</strong> @Model.FirstName</div>
+        <div class="text-sm"><strong>نام خانوادگی:</strong> @Model.LastName</div>
+        <div class="text-sm"><strong>کد ملی:</strong> @Model.NationalCode</div>
+        <div class="text-sm"><strong>نام مدرسه:</strong> @Model.SchoolName</div>
+        <div class="text-sm"><strong>پایه تحصیلی:</strong> @Model.Grade</div>
+        <div class="text-sm"><strong>نام مربی:</strong> @Model.CoachName</div>
+    </div>
+
+    <form id="restoreStudentForm" asp-action="RestorePartialConfirmed" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+
+        <div class="flex items-center justify-center gap-2">
+            <button type="submit" class="inline-block bg-teal-300 text-slate-800 px-3 py-2 rounded hover:bg-teal-400 transition">تأیید و فعال‌سازی</button>
+            <button type="button" id="deleteCancelBtn" class="inline-block bg-slate-100 text-slate-800 px-3 py-2 rounded hover:bg-slate-300 transition">انصراف</button>
+        </div>
+    </form>
+</div>

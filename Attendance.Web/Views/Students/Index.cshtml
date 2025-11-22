@@ -1,0 +1,805 @@
+﻿@model Attendance.Data.VModels.Students.StudentsIndexViewModel
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.min.css" />
+
+@{
+    ViewData["Title"] = "فهرست دانش‌آموزان";
+}
+
+<!-- کارت و هدر -->
+<div class="bg-white rounded-lg border p-6 space-y-4">
+    <div class="flex items-center justify-between gap-4">
+        <div>
+            <h2 class="text-xl font-bold text-slate-800">اطلاعات کلیه دانش‌آموزان</h2>
+            <p class="text-sm text-slate-500">نمایش و مدیریت دانش‌آموزان (غیرفعال)</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            @{
+                var archiveHasInactive = (Model?.InactiveStudents ?? 0) > 0;
+            }
+
+            <a asp-action="Archive"
+               id="archiveArchiveBtn"
+               class="inline-block font-bold px-3 py-2 rounded transition-all duration-300
+          @(archiveHasInactive
+                              ? "bg-rose-500 text-white shadow-lg archive-on animate-archive-pulse"
+                              : "bg-rose-100/70 text-rose-800 hover:bg-rose-200")">
+                آرشیو دانش آموزان (غیرفعال)
+            </a>
+
+            <a asp-action="Create"
+               class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">
+                افزودن دانش‌آموز جدید
+            </a>
+
+            <button type="button" onclick="printStudentTableWithSwal()"
+                    class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">
+                دریافت گزارش
+            </button>
+        </div>
+    </div>
+
+    <hr class="border-slate-200">
+
+    <div class="bg-slate-100/50 rounded-lg border border-dashed p-2">
+        <div class="flex-1">
+            <div class="grid grid-cols-1 md:grid-cols-3 text-center gap-3 text-sm">
+                <div class="bg-cyan-200/50 rounded-lg p-2">
+                    <div class="text-sm text-cyan-750">
+                        تعداد کل دانش‌آموزان:
+                        <span class="font-bold text-slate-700"> @Model.TotalStudents نفر</span>
+                    </div>
+                </div>
+
+                <div class="bg-teal-100 rounded-lg p-2">
+                    <div class="text-sm text-teal-800">
+                        تعداد دانش‌آموزان فعال:
+                        <span class="font-bold text-teal-700"> @Model.ActiveStudents نفر</span>
+                    </div>
+                </div>
+
+                <div class="bg-rose-100 rounded-lg p-2">
+                    <div class="text-sm text-rose-800">
+                        تعداد دانش‌آموزان غیرفعال:
+                        <span class="font-bold text-rose-700"> @Model.InactiveStudents نفر</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-slate-100/50 rounded-lg border border-dashed p-2">
+        <div class="flex-1">
+            <div class="flex items-center justify-between gap-4">
+                <input id="studentSearchInput" type="search"
+                       class="px-3 py-2 border rounded w-80 text-sm"
+                       placeholder="جستجو بر اساس : " />
+
+                <div class="mt-4 flex items-center justify-start gap-4">
+                    <form method="get" class="flex items-center gap-2">
+                        <input type="hidden" name="search" value="@Model.Search" />
+
+                        <label class="flex items-center gap-2 text-sm text-slate-700">
+                            <span>تعداد صفحات:</span>
+                            <select id="pageSizeSelector" name="pageSize" class="px-2 py-1 border rounded text-sm">
+                                <option value="5" selected='@(Model.PageSize == 5 ? "selected" : null)'>5</option>
+                                <option value="10" selected='@(Model.PageSize == 10 ? "selected" : null)'>10</option>
+                                <option value="25" selected='@(Model.PageSize == 25 ? "selected" : null)'>25</option>
+                                <option value="50" selected='@(Model.PageSize == 50 ? "selected" : null)'>50</option>
+                            </select>
+                        </label>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loader overlay -->
+    <div id="students-loader"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-white/40 backdrop-blur-sm hidden animate-fade-scale">
+        <div class="p-4 rounded-lg bg-white shadow-xl flex items-center gap-3">
+            <svg class="w-6 h-6 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                 viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+
+            <div>
+                <div class="text-sm font-medium text-slate-700">در حال بارگذاری...</div>
+                <div class="text-xs text-slate-500">لطفاً منتظر بمانید.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TempData notifications (server-side) -->
+    @if (TempData["SuccessMessage"] is string success)
+    {
+        <div id="server-success" data-message="@success"></div>
+    }
+    @if (TempData["ErrorMessage"] is string error)
+    {
+        <div id="server-error" data-message="@error"></div>
+    }
+
+    <div class="bg-slate-100/20 border rounded">
+        <div id="loadingIndicator" class="hidden text-center text-slate-800 my-3">در حال بارگذاری...</div>
+
+        <table class="min-w-full divide-y divide-slate-100">
+            <thead class="bg-blue-100/20">
+                <tr>
+                    <th class="px-2 py-2 align-middle text-right text-sm font-bold text-slate-700">تصویر</th>
+                    <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">نام</th>
+                    <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">نام خانوادگی</th>
+                    <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">تولد</th>
+                    <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">کد ملی</th>
+                    <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">پایه</th>
+                    <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">مدرسه</th>
+                    <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">وضعیت پرداخت</th>
+                    <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">وضعیت</th>
+                    <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">عملیات</th>
+                    @* <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">علت غیرفعال شدن</th> *@
+                </tr>
+            </thead>
+
+            <tbody id="students-table-body" class="bg-white divide-y divide-slate-100">
+                @if (Model.Students == null || !Model.Students.Any())
+                {
+                    <tr class="bg-rose-100/50">
+                        <td class="text-center text-slate-500" colspan="14">
+                            <div class="flex items-center justify-center mb-2">
+                                <div class="mt-2 flex text-sm text-rose-700 font-bold items-center justify-center">هیچ اطلاعاتی در جدول دانش آموزان موجود نیست.</div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var s in Model.Students)
+                    {
+                        @Html.Partial("_RowStudentPartial", s)
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination (unchanged) -->
+    <div class="mt-4 flex items-center justify-between gap-2">
+        <div class="text-sm font-bold text-slate-800">
+            شماره صفحه : <span class="font-bold">@Model.Page</span> از <span class="font-bold">@Model.TotalPages</span>
+        </div>
+
+        <div class="inline-flex items-center">
+            <nav class="inline-flex items-center rounded-md gap-2" role="navigation" aria-label="Pagination">
+                <a asp-action="Index"
+                   asp-route-page="@(Model.Page - 1)"
+                   asp-route-pageSize="@Model.PageSize"
+                   asp-route-search="@Model.Search"
+                   class="px-2 py-1 font-bold border text-sm gap-2 rounded @(Model.Page <= 1 ? "opacity-50 pointer-events-none bg-slate-100" : "bg-white hover:bg-slate-50")">
+                    قبلی
+                </a>
+
+                <span class="px-3 py-1 font-bold rounded-md bg-blue-800 text-sm gap-2 text-slate-100">
+                    @Model.Page
+                </span>
+
+                <a asp-action="Index"
+                   asp-route-page="@(Model.Page + 1)"
+                   asp-route-pageSize="@Model.PageSize"
+                   asp-route-search="@Model.Search"
+                   class="px-2 py-1 font-bold border rounded-md text-sm gap-2 rounded @(Model.Page >= Model.TotalPages ? "opacity-50 pointer-events-none bg-slate-100" : "bg-white hover:bg-slate-50")">
+                    بعدی
+                </a>
+            </nav>
+        </div>
+    </div>
+</div>
+
+@section IndexStudentsScripts {
+    <script src="~/lib/signalr.min.js"></script>
+    <script src="~/js/js_student/students.index.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.min.js"></script>
+    <script src="~/js/js_htmltables/exporttables.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const serverSuccess = document.getElementById('server-success');
+            const serverError = document.getElementById('server-error');
+
+            if (serverSuccess && serverSuccess.dataset.message) {
+                if (window.showNotify) window.showNotify(serverSuccess.dataset.message, 'success');
+                else alert(serverSuccess.dataset.message);
+            }
+            if (serverError && serverError.dataset.message) {
+                if (window.showNotify) window.showNotify(serverError.dataset.message, 'error');
+                else alert(serverError.dataset.message);
+            }
+        });
+    </script>
+
+    <script>
+        (function () {
+            // Helpers
+            function qs(sel, ctx = document) { return ctx.querySelector(sel); }
+            function qsa(sel, ctx = document) { return Array.from((ctx || document).querySelectorAll(sel)); }
+            function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text ?? ''; }
+            function setHTML(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html ?? ''; }
+            function setAttr(id, attr, val) { const el = document.getElementById(id); if (el) el.setAttribute(attr, val ?? ''); }
+
+            // Modal elements
+            const modalRoot = document.getElementById('studentDetailsModal');
+            const backdrop = document.getElementById('studentDetailsBackdrop');
+            const box = document.getElementById('studentDetailsBox');
+            const closeBtns = [
+                document.getElementById('studentDetailsCloseBtn'),
+                document.getElementById('studentDetailsCloseBtn2')
+            ];
+
+            // open modal and apply animation
+            function openStudentDetailsModal() {
+                if (!modalRoot) return;
+                modalRoot.classList.remove('hidden');
+                modalRoot.classList.add('flex');
+
+                // accessibility
+                modalRoot.setAttribute('aria-hidden', 'false');
+
+                // animate backdrop & box
+                backdrop.classList.remove('opacity-0');
+                backdrop.classList.add('opacity-100');
+
+                // animate box
+                requestAnimationFrame(() => {
+                    box.style.transform = ''; // allow tailwind classes to apply
+                    box.classList.remove('translate-y-4', 'opacity-0', 'scale-95');
+                    box.classList.add('translate-y-0', 'opacity-100', 'scale-100');
+
+                    // focus first interactive element inside modal
+                    const focusable = box.querySelector('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])');
+                    if (focusable) focusable.focus();
+                });
+
+                // prevent body scroll while modal open
+                document.documentElement.style.overflow = 'hidden';
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeStudentDetailsModal() {
+                if (!modalRoot) return;
+                // restore
+                modalRoot.setAttribute('aria-hidden', 'true');
+
+                // animate out
+                backdrop.classList.remove('opacity-100');
+                backdrop.classList.add('opacity-0');
+                box.classList.remove('translate-y-0', 'opacity-100', 'scale-100');
+                box.classList.add('translate-y-4', 'opacity-0', 'scale-95');
+
+                // after animation hide root
+                setTimeout(() => {
+                    modalRoot.classList.add('hidden');
+                    modalRoot.classList.remove('flex');
+                    document.documentElement.style.overflow = '';
+                    document.body.style.overflow = '';
+                }, 260);
+            }
+
+            // populate modal fields from dataset of clicked button
+            function populateDetailsFromDataset(ds) {
+                // ds is a DOMStringMap (element.dataset)
+                setText('studentDetailsName', (ds.firstname || '') + ' ' + (ds.lastname || ''));
+                setText('studentDetailsNationalCode', 'کد ملی: ' + (ds.nationalcode || '---'));
+                setText('studentDetailsClass', 'کلاس: ' + (ds.class || ds.classname || '---'));
+                setText('studentDetailsGrade', ds.grade || '---');
+                setText('studentDetailsSchool', ds.school || '---');
+                setText('studentDetailsCoach', ds.coach || '---');
+                setText('studentDetailsWorkgroup', ds.workgroupname || '---');
+                setText('studentDetailsId', ds.id || '—');
+
+                // photo
+                const photoEl = document.getElementById('studentDetailsPhoto');
+                if (photoEl) photoEl.src = ds.photo || '/uploads/students/default.png';
+
+                // status
+                const statusEl = document.getElementById('studentDetailsStatus');
+                if (statusEl) {
+                    if (ds.isactive === 'true' || ds.isactive === true) {
+                        statusEl.textContent = 'فعال';
+                        statusEl.className = 'inline-block px-3 py-1 rounded text-sm font-semibold text-teal-800 bg-teal-100';
+                    } else {
+                        statusEl.textContent = 'غیرفعال';
+                        statusEl.className = 'inline-block px-3 py-1 rounded text-sm font-semibold text-rose-800 bg-rose-100';
+                    }
+                }
+
+                // inactive reason
+                const reason = ds.inactivereason || '';
+                setText('studentDetailsReason', reason ? reason : 'ثبت نشده');
+
+                // forms (consentForm, studentInterviewForm, parentInterviewForm, talentTest, psychologyForm, iqTest, warkTest)
+                const formsWrap = document.getElementById('studentDetailsForms');
+                if (formsWrap) {
+                    formsWrap.innerHTML = ''; // clear
+                    const pairs = [
+                        { key: 'consentform', label: 'تعهدنامه' },
+                        { key: 'studentinterviewform', label: 'مصاحبه دانش‌آموز' },
+                        { key: 'parentinterviewform', label: 'مصاحبه والدین' },
+                        { key: 'talenttest', label: 'استعدادیابی' },
+                        { key: 'psychologyform', label: 'روانشناسی' },
+                        { key: 'iqtest', label: 'آزمون هوش' },
+                        { key: 'warktest', label: 'آزمون وارک' }
+                    ];
+                    pairs.forEach(p => {
+                        const raw = ds[p.key];
+                        if (raw === undefined) return; // skip if not provided
+                        const txt = (raw === '1' || raw === 'True' || raw === 'true' || raw === 1) ? 'تکمیل شده' : 'تکمیل نشده';
+                        const chip = document.createElement('div');
+                        chip.className = 'px-3 py-1 bg-slate-100 rounded text-sm';
+                        chip.textContent = `${p.label}: ${txt}`;
+                        formsWrap.appendChild(chip);
+                    });
+                }
+
+                // link to full details page (if you want)
+                const fullLink = document.getElementById('studentDetailsFullLink');
+                if (fullLink) fullLink.href = `/Students/Details/${ds.id || ''}`;
+            }
+
+            // click handler for any .open-view-modal
+            document.addEventListener('click', function (e) {
+                const btn = e.target.closest('.open-view-modal');
+                if (!btn) return;
+
+                // read dataset from button
+                const ds = btn.dataset || {};
+                populateDetailsFromDataset(ds);
+                openStudentDetailsModal();
+            });
+
+            // close handlers
+            closeBtns.forEach(b => {
+                if (b) b.addEventListener('click', closeStudentDetailsModal);
+            });
+
+            // close on backdrop click
+            if (modalRoot) modalRoot.addEventListener('click', function (e) {
+                if (e.target === modalRoot || e.target === backdrop) closeStudentDetailsModal();
+            });
+
+            // close on ESC
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && modalRoot && !modalRoot.classList.contains('hidden')) {
+                    closeStudentDetailsModal();
+                }
+            });
+
+        })();
+    </script>
+
+    <script>
+        // ========== نمایش TempData.Notify (فقط در این صفحه: Index) ==========
+        (function showTempDataNotifyOnIndex() {
+            try {
+                // 1) Try to read TempData["Notify"] if controller set JSON there.
+                // Use Html.Raw so Razor won't HTML-encode the already-serialized JSON.
+                const rawNotify = @Html.Raw(TempData["Notify"] ?? "null");
+
+                if (rawNotify) {
+                    let payload = null;
+                    if (typeof rawNotify === 'string') {
+                        try {
+                            payload = JSON.parse(rawNotify);
+                        } catch (e) {
+                            // If it's a plain string (not JSON), wrap it for consistency
+                            payload = { type: 'info', message: rawNotify };
+                        }
+                    } else {
+                        payload = rawNotify;
+                    }
+
+                    if (payload) {
+                        const type = (payload.Type || payload.type || 'info').toString().toLowerCase();
+                        const title = payload.Title || payload.title || (type === 'success' ? 'عملیات با موفقیت انجام شد.' : (type === 'error' ? 'خطا' : 'اطلاع'));
+                        const message = payload.Message || payload.message || String(payload);
+                        const icon = type === 'success' ? 'success' : (type === 'error' ? 'error' : 'info');
+
+                        Swal.fire({
+                            icon,
+                            title,
+                            text: message, // use text (not html) to avoid entity/HTML rendering
+                            confirmButtonText: 'قبول و بازگشت',
+                            buttonsStyling: false,
+                            customClass: {
+                                confirmButton:
+                                    type === 'success'
+                                        ? "inline-block w-full justify-between gap-4 px-3 py-2 bg-green-600 text-sm text-slate-100 rounded hover:bg-green-700 transition mt-3"
+                                        : type === 'error'
+                                            ? "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-600 text-sm text-slate-100 rounded hover:bg-rose-700 transition mt-3"
+                                            : "inline-block w-full justify-between gap-4 px-3 py-2 bg-pink-600 text-sm text-slate-100 rounded hover:bg-pink-700 transition mt-3"
+                            }
+                        });
+                        return;
+                    }
+                }
+            } catch (ex) {
+                // اگر parse خطا داد، نادیده بگیر (نگذار کرش کنه)
+                console.warn('Error parsing TempData.Notify on Index', ex);
+            }
+
+            // fallback: اگر TempData["SuccessMessage"] یا TempData["ErrorMessage"] وجود داشته باشد
+            try {
+                // use server-side JSON serialization to avoid Razor encoding issues
+                const success = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["SuccessMessage"] ?? ""));
+                const error = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"] ?? ""));
+
+                // success / error are JS strings now (possibly empty "")
+                if (success && success !== "") {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'عملیات با موفقیت انجام شد.',
+                        text: success,
+                        confirmButtonText: 'تأیید و بازگشت',
+                        buttonsStyling: false,
+                        customClass: {
+                            confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-green-600 text-sm text-slate-100 rounded hover:bg-green-700 transition mt-3"
+                        }
+                    });
+                } else if (error && error !== "") {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'متأسفم... عملیات با خطا مواجه شد.',
+                        text: error,
+                        confirmButtonText: 'قبول و بازگشت',
+                        buttonsStyling: false,
+                        customClass: {
+                            confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-600 text-sm text-slate-100 rounded hover:bg-rose-700 transition mt-3"
+                        }
+                    });
+                }
+            } catch (ex) {
+                console.warn('Error reading TempData Success/Error on Index', ex);
+            }
+        })();
+
+
+        // ========== مدیریت کلیک روی دکمه حذف نرم (student-delete-btn) ==========
+        document.addEventListener('click', function (e) {
+            if (!e.target) return;
+            const btn = e.target.closest('.student-delete-btn');
+            if (!btn) return;
+
+            e.preventDefault();
+
+            const form = btn.closest('form.delete-form');
+            if (!form) {
+                console.warn('No matching delete form found for id', btn.dataset.id);
+                return;
+            }
+
+            // dataset values come from DOM attributes and are plain strings (no Razor encoding here)
+            const studentName = btn.dataset.name || 'این دانش‌آموز';
+
+            // مرحله ۱: درخواست دلیل غیرفعال‌سازی
+            Swal.fire({
+                title: 'دلیل غیرفعال‌سازی',
+                html: `دلیل غیرفعال کردن دانش آموز: (<strong class="text-rose-700">${escapeHtml(studentName)}</strong>) را وارد کنید:`,
+                input: 'text',
+                inputPlaceholder: 'مثلاً انتقال به مدرسه دیگر',
+                inputAttributes: {
+                    dir: 'rtl',
+                    style: 'text-align:right',
+                },
+                allowOutsideClick: false,
+                animation: true,
+                allowEscapeKey: true,
+                showCancelButton: true,
+                buttonsStyling: false,
+                cancelButtonText: 'انصراف',
+                confirmButtonText: 'تأیید و ادامه',
+                customClass: {
+                    cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+                    confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-green-600 text-sm text-slate-100 rounded hover:bg-green-700 transition mt-3",
+                },
+                reverseButtons: true,
+                preConfirm: (value) => {
+                    if (!value || !value.trim()) {
+                        // showValidationMessage accepts plain string or HTML; we supply safe text-styled HTML block
+                        Swal.showValidationMessage(`<div class="text-rose-600 text-sm font-bold px-3 py-1 rounded">لطفاً دلیل غیرفعالسازی اطلاعات این دانش آموز را وارد نمایید.</div>`);
+                    }
+                    return value ? value.trim() : '';
+                }
+            }).then(result => {
+                if (!result.isConfirmed) return;
+
+                const reason = result.value;
+                const input = form.querySelector('.inactive-reason-input');
+                if (!input) {
+                    console.warn('inactive reason input not found in form for id', btn.dataset.id);
+                    return;
+                }
+                input.value = reason;
+
+                // مرحله ۲: تأیید نهایی قبل از ارسال
+                Swal.fire({
+                    title: 'آیا مطمئن هستید؟',
+                    text: `دانش‌آموز ${escapeHtml(studentName)} غیرفعال خواهد شد.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'بله، غیرفعال شود',
+                    cancelButtonText: 'خیر، انصراف',
+                    customClass: {
+                        cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-600 text-sm text-slate-100 rounded hover:bg-rose-700 transition mt-3",
+                    },
+                    reverseButtons: true
+                }).then(confirmResult => {
+                    if (confirmResult.isConfirmed) {
+                        // مرحله ۳: نمایش لودینگ هنگام ارسال
+                        Swal.fire({
+                            title: 'در حال غیرفعال‌سازی...',
+                            text: 'لطفاً چند لحظه صبر کنید',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                                // submit the form (anti-forgery token included in form)
+                                form.submit();
+                            }
+                        });
+                    }
+                });
+            });
+        });
+
+        // Helper: escape HTML when interpolating user-controllable strings into html:
+        function escapeHtml(unsafe) {
+            if (!unsafe && unsafe !== "") return "";
+            return String(unsafe)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+    </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const pageSizeSelector = document.getElementById("pageSizeSelector");
+            const tableBody = document.getElementById("students-table-body");
+            const loading = document.getElementById("loadingIndicator");
+
+            if (!pageSizeSelector) return;
+
+            pageSizeSelector.addEventListener("change", async function () {
+                const pageSize = this.value;
+                const currentPage = @Model.Page;
+                const search = '@Model.Search';
+                const url = `@Url.Action("Index", "Students")?page=${currentPage}&pageSize=${pageSize}&search=${search}`;
+
+                try {
+                    loading.classList.remove("hidden");
+
+                    const response = await fetch(url, {
+                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                    });
+
+                    if (!response.ok) {
+                        console.error("خطا در دریافت داده‌ها", response.status);
+                        return;
+                    }
+
+                    const html = await response.text();
+
+                    // استخراج tbody جدید از HTML دریافت‌شده
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, "text/html");
+
+                    // جایگزینی بخش‌های جدول و آمار
+                    const newTableBody = doc.querySelector("#students-table-body");
+                    const newStats = doc.querySelectorAll(".grid > div"); // کارت‌های آمار
+
+                    if (newTableBody) {
+                        tableBody.innerHTML = newTableBody.innerHTML;
+                    }
+
+                    // آمار را جایگزین کن (اختیاری)
+                    const statCards = document.querySelectorAll(".grid > div");
+                    if (newStats.length === statCards.length) {
+                        newStats.forEach((card, i) => {
+                            statCards[i].innerHTML = card.innerHTML;
+                        });
+                    }
+
+                } catch (err) {
+                    console.error("AJAX Error:", err);
+                } finally {
+                    loading.classList.add("hidden");
+                }
+            });
+        });
+    </script>
+
+    <style>
+        .swal2-validation-message {
+            background: #fff1f2; /* معادل Tailwind bg-rose-50 */
+            color: #9f1239; /* معادل تقریبی text-rose-700 */
+            padding: 0.5rem 1rem; /* px-4 py-2 */
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem; /* mt-3 */
+            font-size: 0.875rem; /* text-sm */
+            direction: rtl;
+            text-align: right;
+            box-shadow: none;
+            white-space: normal;
+            word-break: break-word;
+        }
+    </style>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // ---------- دسترسی به دکمه آرشیو ----------
+            const archiveBtn = document.querySelector('a[asp-action="Archive"]');
+            if (!archiveBtn) return;
+
+            // ---------- مقدار اولیه از Razor model (عدد واقعی) ----------
+        const inactiveStudents = parseInt(@Model.InactiveStudents, 10);
+
+            // ---------- بررسی وجود دانش‌آموز غیرفعال و اعمال انیمیشن ----------
+            if (inactiveStudents > 0) {
+                // اضافه کردن کلاس انیمیشن روشن شدن (pulse / blink / glow)
+                archiveBtn.classList.add("animate-pulse", "bg-rose-600", "text-white");
+            }
+
+            // ---------- Optional: وقتی تعداد تغییر کرد (مثلاً via SignalR) ----------
+            if (typeof signalR !== "undefined") {
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl("hubs//studentsHub")
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on("StudentDeactivated", function (data) {
+                    const totalInactive = data.stats.inactive;
+                    if (totalInactive > 0) {
+                        archiveBtn.classList.add("animate-pulse", "bg-rose-300", "text-white");
+                    } else {
+                        archiveBtn.classList.remove("animate-pulse", "bg-rose-300", "text-white");
+                    }
+                });
+
+                connection.start().catch(err => console.error(err.toString()));
+            }
+        });
+    </script>
+
+    <script>
+     // === Realtime search: debounce + AbortController + loader ===
+        (function () {
+          const SEARCH_DEBOUNCE_MS = 300; // قابل تنظیم: کمتر => سریع‌تر، بیشتر => کمتر درخواست
+          const input = document.getElementById('studentSearchInput');
+          const tableBody = document.getElementById('students-table-body');
+          const loadingOverlay = document.getElementById('students-loader'); // موجود در پارشیال
+          const loadingIndicator = document.getElementById('loadingIndicator');
+
+          if (!input || !tableBody) return;
+
+          // base index url: اگر بخشی در view مقداردهی شده باشد از آن استفاده کن، در غیر اینصورت مسیر نسبی پیش‌فرض
+          const root = document.getElementById('studentsIndexRoot');
+          const BASE_INDEX_URL = root ? (root.dataset.indexUrl || '/Students/Index') : '/Students/Index';
+
+          // debounce implementation with "leading" behaviour (show loader immediately)
+          let timer = null;
+          let controller = null; // for AbortController to cancel previous fetch
+
+          function showLoading() {
+            if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+            if (loadingIndicator) loadingIndicator.classList.remove('hidden');
+          }
+          function hideLoading() {
+            if (loadingOverlay) loadingOverlay.classList.add('hidden');
+            if (loadingIndicator) loadingIndicator.classList.add('hidden');
+          }
+
+          async function doSearchAndReplace(searchText) {
+            // cancel previous request if still running
+            if (controller) {
+              try { controller.abort(); } catch (e) { /* ignore */ }
+              controller = null;
+            }
+
+            controller = new AbortController();
+            const signal = controller.signal;
+
+            const params = new URLSearchParams();
+            params.set('page', '1'); // when searching reset to page 1
+            // use current pageSize from selector if exists
+            const pageSizeEl = document.getElementById('pageSizeSelector');
+            const ps = (pageSizeEl && pageSizeEl.value) ? pageSizeEl.value : '5';
+            params.set('pageSize', ps);
+            if (searchText && String(searchText).trim() !== '') params.set('search', String(searchText).trim());
+
+            const url = BASE_INDEX_URL + '?' + params.toString();
+
+            showLoading();
+
+            try {
+              const res = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                signal
+              });
+
+              if (!res.ok) {
+                console.warn('search fetch failed', res.status);
+                return;
+              }
+
+              const html = await res.text();
+
+              // parse returned HTML and extract tbody + stats cards (if partial view returns them)
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(html, 'text/html');
+
+              const newTbody = doc.querySelector('#students-table-body');
+              if (newTbody) {
+                tableBody.innerHTML = newTbody.innerHTML;
+              } else {
+                // if server returned only JSON or fragment, you might handle accordingly
+                // (not implemented here because your Index partial returns HTML)
+              }
+
+              // optionally update stats if present in returned doc
+              const newStats = doc.querySelectorAll('.grid > div');
+              if (newStats && newStats.length) {
+                const statCards = document.querySelectorAll('.grid > div');
+                if (statCards.length === newStats.length) {
+                  newStats.forEach((c, i) => statCards[i].innerHTML = c.innerHTML);
+                }
+              }
+            } catch (err) {
+              if (err.name === 'AbortError') {
+                // console.log('previous search aborted');
+              } else {
+                console.error('search error', err);
+              }
+            } finally {
+              hideLoading();
+              controller = null;
+            }
+          }
+
+          // input event handler with debounce and immediate visual feedback
+          input.addEventListener('input', function (e) {
+            const q = e.target.value;
+
+            // show loader immediately so user feels instant feedback
+            showLoading();
+
+            // clear previous timer
+            if (timer) clearTimeout(timer);
+
+            // start new timer for actual request (debounce)
+            timer = setTimeout(() => {
+              doSearchAndReplace(q);
+              timer = null;
+            }, SEARCH_DEBOUNCE_MS);
+          });
+
+          // optional: search on Enter immediately
+          input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+              if (timer) { clearTimeout(timer); timer = null; }
+              doSearchAndReplace(input.value);
+            }
+          });
+
+          // optional: expose function to trigger search programmatically
+          window.triggerStudentSearch = function (query) {
+            if (timer) { clearTimeout(timer); timer = null; }
+            doSearchAndReplace(query ?? input.value);
+          };
+        })();
+    </script>
+
+}

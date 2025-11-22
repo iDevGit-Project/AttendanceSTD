@@ -1,0 +1,106 @@
+﻿@* @{
+    ViewData["Title"] = "پیکربندی اتصال به پایگاه داده";
+}
+
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div class="min-h-screen bg-slate-100 flex items-center justify-center p-6">
+    <div class="bg-white rounded-lg shadow-md p-6 w-full max-w-2xl">
+        <h1 class="text-lg font-bold text-center mb-4">⚙️ تنظیم اتصال پایگاه داده</h1>
+
+        @if (!string.IsNullOrEmpty(ViewBag.Message))
+        {
+            <div class="text-center mb-4 p-2 rounded text-sm @(ViewBag.Message.ToString().Contains("❌") ? "bg-rose-100 text-rose-700" : "bg-teal-100 text-teal-700")">
+                @Html.Raw(ViewBag.Message)
+            </div>
+        }
+
+        <form id="connectionForm" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">نام سرور</label>
+                    <input id="server" class="w-full border px-2 py-2 rounded text-sm" placeholder="مثلاً localhost یا DESKTOP-..." />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">نام پایگاه داده</label>
+                    <input id="database" class="w-full border px-2 py-2 rounded text-sm" placeholder="DB_AttendanceStudentMGR" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">نام کاربری</label>
+                    <input id="user" class="w-full border px-2 py-2 rounded text-sm" placeholder="adminProject" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">رمز عبور</label>
+                    <input id="password" type="password" class="w-full border px-2 py-2 rounded text-sm" />
+                </div>
+            </div>
+
+            <div class="flex justify-between pt-4">
+                <button type="button" id="btnTest" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                    تست اتصال
+                </button>
+                <button type="button" id="btnSave" class="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition">
+                    ذخیره اتصال
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    async function postJson(url, data) {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+        return await res.json();
+    }
+
+    document.getElementById("btnTest").addEventListener("click", async () => {
+        const info = {
+            server: server.value,
+            database: database.value,
+            user: user.value,
+            password: password.value
+        };
+
+        Swal.fire({ title: "در حال تست اتصال...", didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+        const res = await postJson("/Setup/TestConnectionAjax", info);
+        Swal.close();
+
+        Swal.fire({
+            icon: res.ok ? "success" : "error",
+            title: res.ok ? "موفق" : "خطا",
+            text: res.message,
+            confirmButtonText: "باشه"
+        });
+    });
+
+    document.getElementById("btnSave").addEventListener("click", async () => {
+        const info = {
+            server: server.value,
+            database: database.value,
+            user: user.value,
+            password: password.value
+        };
+
+        Swal.fire({ title: "در حال ذخیره...", didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+        const res = await postJson("/Setup/SaveConnectionAjax", info);
+        Swal.close();
+
+        Swal.fire({
+            icon: res.ok ? "success" : "error",
+            title: res.ok ? "انجام شد" : "خطا",
+            text: res.message,
+            confirmButtonText: "باشه"
+        });
+    });
+</script>
+ *@
