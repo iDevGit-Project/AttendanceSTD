@@ -1,0 +1,50 @@
+﻿@using Attendance.Web.Helpers
+@{
+    ViewData["Title"] = "جزئیات جلسه حضور و غیاب";
+}
+
+<div class="bg-white rounded-lg p-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold">@Model.Title</h2>
+        <div class="text-sm text-slate-500">تاریخ جلسه: @PersianDateConverter.ToShamsiString(Model.SessionDate)</div>
+    </div>
+
+    <form method="post" asp-action="SaveSessionAttendance" asp-controller="Attendance">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="sessionId" value="@Model.Id" />
+        <div class="mt-4">
+            <table class="min-w-full divide-y divide-slate-100">
+                <thead>
+                    <tr>
+                        <th class="px-2 py-2">حاضر؟</th>
+                        <th class="px-2 py-2">تصویر</th>
+                        <th class="px-2 py-2">نام</th>
+                        <th class="px-2 py-2">نام خانوادگی</th>
+                        <th class="px-2 py-2">کد ملی</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var rec in Model.Records)
+                    {
+                        <tr>
+                            <td class="px-2 py-2 text-center">
+                                <input type="checkbox" name="presentStudentIds" value="@rec.StudentId" @(rec.IsPresent ? "checked" : "") />
+                            </td>
+                            <td class="px-2 py-2">
+                                <img src="@(rec.Student?.PhotoPath ?? "/uploads/students/default.png")" class="h-10 w-10 rounded object-cover" />
+                            </td>
+                            <td class="px-2 py-2">@rec.Student?.FirstName</td>
+                            <td class="px-2 py-2">@rec.Student?.LastName</td>
+                            <td class="px-2 py-2">@rec.Student?.NationalCode</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="px-3 py-2 bg-green-600 text-white rounded">ذخیره حضور و غیاب</button>
+            <a asp-action="CreateWizard" asp-controller="Attendance" class="px-3 py-2 bg-slate-100 rounded ml-2">بازگشت</a>
+        </div>
+    </form>
+</div>

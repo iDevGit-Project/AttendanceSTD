@@ -1,0 +1,154 @@
+﻿@model List<string>
+@{
+    ViewData["Title"] = "ایجاد جلسه جدید حضور و غیاب";
+}
+
+<div class="bg-white rounded-lg p-6">
+    <h2 class="text-lg font-bold mb-3">ایجاد جلسه حضور و غیاب - ویزارد</h2>
+
+    <div id="wizard">
+        <div id="step-1" class="space-y-3">
+            <label class="block text-sm font-medium">انتخاب پایه</label>
+            <select id="wizard-grade" class="border rounded px-3 py-2 w-60">
+                <option value="">-- انتخاب پایه --</option>
+                @foreach (var g in Model)
+                {
+                    <option value="@g">@g</option>
+                }
+            </select>
+
+            <div>
+                <button id="to-step-2" class="px-3 py-2 bg-blue-600 text-white rounded">مرحله بعد — مشاهده دانش‌آموزان</button>
+            </div>
+        </div>
+
+        <div id="step-2" class="hidden space-y-3">
+            <div>
+                <button id="back-to-step-1" class="px-3 py-2 bg-slate-100 rounded">بازگشت</button>
+            </div>
+
+            <div>
+                <h3 class="font-bold">دانش‌آموزان پایه: <span id="selected-grade"></span></h3>
+                <div id="students-list" class="grid grid-cols-1 gap-2 mt-3"></div>
+            </div>
+
+            <div class="mt-4">
+                <button id="to-step-3" class="px-3 py-2 bg-green-600 text-white rounded">مرحله بعد — تأیید و ایجاد جلسه</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section CreateWizardSesstionScripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        (function () {
+            const gradeSelect = document.getElementById('wizard-grade');
+            const toStep2Btn = document.getElementById('to-step-2');
+            const step1 = document.getElementById('step-1');
+            const step2 = document.getElementById('step-2');
+            const backBtn = document.getElementById('back-to-step-1');
+            const studentsList = document.getElementById('students-list');
+            const selectedGradeSpan = document.getElementById('selected-grade');
+            const toStep3Btn = document.getElementById('to-step-3');
+
+            toStep2Btn.addEventListener('click', async function () {
+                const g = gradeSelect.value;
+                if (!g) {
+                    Swal.fire({ icon: 'warning', title: 'لطفاً یک پایه انتخاب کنید' });
+                    return;
+                }
+                // show loading
+                Swal.showLoading();
+                try {
+                    const res = await fetch(`@Url.Action("GetStudentsByGrade","Attendance")?grade=${encodeURIComponent(g)}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!res.ok) throw new Error('بارگذاری دانش‌آموزان موفق نبود');
+                    const data = await res.json();
+
+                    // populate list
+                    studentsList.innerHTML = '';
+                    data.forEach(s => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center gap-3 p-2 border rounded';
+                        div.innerHTML = `
+                            <input type="checkbox" class="student-checkbox" value="${s.id}" id="st-${s.id}" checked />
+                            <img src="${s.photo}" class="w-10 h-10 rounded object-cover" />
+                            <div class="flex-1">
+                                <div class="font-bold">${s.firstName} ${s.lastName}</div>
+                                <div class="text-xs text-slate-500">${s.nationalCode ?? ''}</div>
+                            </div>
+                        `;
+                        studentsList.appendChild(div);
+                    });
+
+                    selectedGradeSpan.textContent = g;
+
+                    step1.classList.add('hidden');
+                    step2.classList.remove('hidden');
+
+                } catch (err) {
+                    console.error(err);
+                    Swal.fire({ icon: 'error', title: 'خطا', text: 'بارگذاری لیست دانش‌آموزان ناموفق بود.' });
+                } finally {
+                    Swal.close();
+                }
+            });
+
+            backBtn.addEventListener('click', function () {
+                step2.classList.add('hidden');
+                step1.classList.remove('hidden');
+            });
+
+            toStep3Btn.addEventListener('click', async function () {
+                const grade = gradeSelect.value;
+                const checked = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(x => parseInt(x.value));
+                if (!grade) return Swal.fire({ icon: 'warning', text: 'پایه انتخاب نشده' });
+                if (!checked.length) return Swal.fire({ icon: 'warning', text: 'هیچ دانش‌آموزی انتخاب نشده' });
+
+                // ask title via Swal and get today's shamsi date
+                const todayShamsi = (new Date()).toLocaleDateString('fa-IR-u-nu-latn'); // approximate
+                const { value: title } = await Swal.fire({
+                    title: 'نام جلسه را وارد کنید',
+                    input: 'text',
+                    inputLabel: `تاریخ جلسه (شمسی): ${todayShamsi}`,
+                    inputPlaceholder: 'مثلاً جلسه شماره 1 - جمعه صبح',
+                    preConfirm: v => v && v.trim() ? v.trim() : Swal.showValidationMessage('نام جلسه لازم است')
+                });
+
+                if (!title) return;
+
+                // submit via POST form (use Fetch with form data)
+                const fd = new FormData();
+                fd.append('title', title);
+                fd.append('dateShamsi', todayShamsi);
+                fd.append('grade', grade);
+                checked.forEach(id => fd.append('studentIds', id));
+
+                Swal.fire({ title: 'در حال ایجاد جلسه...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                try {
+                    const resp = await fetch('@Url.Action("CreateSession","Attendance")', {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
+                        body: fd
+                    });
+
+                    if (resp.redirected) {
+                        window.location.href = resp.url; // معمولاً به SessionDetails هدایت می‌شود
+                        return;
+                    }
+
+                    if (!resp.ok) throw new Error('خطا در ایجاد جلسه');
+                    const txt = await resp.text();
+                    // در صورت برگرداندن HTML یا پیام، ریدایرکت کنیم یا نمایش دهیم
+                    window.location.reload();
+                } catch (err) {
+                    console.error(err);
+                    Swal.fire({ icon: 'error', title: 'خطا', text: 'ایجاد جلسه موفق نبود.' });
+                }
+            });
+        })();
+    </script>
+}

@@ -10,35 +10,24 @@ namespace Attendance.Data.Entities
 {
     public class AttendanceSession
     {
-        [Key]
-        public long Id { get; set; }
+        public int Id { get; set; }
 
-        [MaxLength(250)]
-        public string? Title { get; set; }
+        public string Title { get; set; } = string.Empty; // نام جلسه (از مدیر دریافت می‌شود)
 
-        [MaxLength(200)]
+        // ذخیره به صورت UTC (SessionDate از تاریخ شمسی به UTC تبدیل می‌شود)
+        public DateTime SessionDate { get; set; }
+
+        // مکان اختیاری (در این مرحله می‌توانیم School یا Location را قرار دهیم)
         public string? Location { get; set; }
 
-        [Column(TypeName = "date")]
-        public DateTime Date { get; set; }  // store date (UTC date) - use Date component
+        // پایه‌ای که این جلسه برای آن تشکیل شده (مهم برای فیلتر/گزارش)
+        public string? Grade { get; set; }
 
-        public DateTime? StartAt { get; set; } // datetime2
-        public DateTime? EndAt { get; set; }   // datetime2
-
-        [MaxLength(2000)]
-        public string? Notes { get; set; }
-
-        // navigation
-        public ICollection<AttendanceRecord> Records { get; set; } = new List<AttendanceRecord>();
-
-        // Audit
-        public int? CreatedById { get; set; }
+        // کاربری که ایجاد کرده (نام کاربری یا id)
+        public string? CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public int? ModifiedById { get; set; }
-        public DateTime? ModifiedAt { get; set; }
 
-        // Soft-delete
-        public int? DeletedById { get; set; }
-        public DateTime? DeletedAt { get; set; }
+        // Navigation
+        public ICollection<AttendanceRecord> Records { get; set; } = new List<AttendanceRecord>();
     }
 }

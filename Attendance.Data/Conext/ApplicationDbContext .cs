@@ -12,33 +12,47 @@ namespace Attendance.Data.Conext
         public DbSet<Student> Students { get; set; } = null!;
         public DbSet<Teacher> Teachers { get; set; } = null!;
         public DbSet<Class> Classes { get; set; } = null!;
-        public DbSet<AttendanceTable> Attendances { get; set; } = null!;
+        public DbSet<AttendanceSession> AttendanceSessions { get; set; }
+        public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
 
-        protected override void OnModelCreating(ModelBuilder builder)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(builder);
+            base.OnModelCreating(modelBuilder);
 
             // ---------- Student: Unique Index for NationalCode (فقط رکوردهای فعال) ----------
+            modelBuilder.Entity<AttendanceSession>(b =>
+            {
+                b.HasKey(x => x.Id);
+                b.Property(x => x.Title).HasMaxLength(300);
+                b.Property(x => x.Location).HasMaxLength(200);
+                b.Property(x => x.Grade).HasMaxLength(50);
+            });
             // توجه: HasFilter برای SQL Server نوشته شده (براکت دور ستون‌ها)
-            builder.Entity<Student>()
+            modelBuilder.Entity<Student>()
                 .HasIndex(s => s.NationalCode)
                 .IsUnique()
                 .HasFilter("[NationalCode] IS NOT NULL AND [IsActive] = 1");
 
-            // ---------- AttendanceTable: LateBy column mapping ----------
-            builder.Entity<AttendanceTable>()
-                .Property(a => a.LateBy)
-                .HasColumnType("time");
 
-            // جلوگیری از ثبت چند ردیف حضور برای یک دانش‌آموز در همان روز
-            builder.Entity<AttendanceTable>()
-                .HasIndex(a => new { a.StudentId, a.Date })
-                .IsUnique();
+            modelBuilder.Entity<AttendanceRecord>(b =>
+            {
+                b.HasKey(x => x.Id);
+
+                b.HasOne(r => r.Session)
+                 .WithMany(s => s.Records)
+                 .HasForeignKey(r => r.SessionId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasOne(r => r.Student)
+                 .WithMany() // اگر خواستید رابطه معکوس اضافه کنید می‌توانیم Student.Records اضافه کنیم اما شما گفتید Student دست نخورَد
+                 .HasForeignKey(r => r.StudentId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
 
             // --------- Global Query Filter for Soft Delete ----------
             // برای همه Entity هایی که ISoftDelete را پیاده‌سازی کرده‌اند
             // به طور پیش‌فرض فقط رکوردهای IsActive == true نمایش داده شوند
-            foreach (var entityType in builder.Model.GetEntityTypes())
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 var clrType = entityType.ClrType;
                 if (typeof(ISoftDelete).IsAssignableFrom(clrType))
@@ -48,18 +62,18 @@ namespace Attendance.Data.Conext
                     var condition = Expression.Equal(prop, Expression.Constant(true));
                     var lambda = Expression.Lambda(condition, parameter);
 
-                    builder.Entity(clrType).HasQueryFilter(lambda);
+                    modelBuilder.Entity(clrType).HasQueryFilter(lambda);
                 }
             }
 
             // ---------- Optional: Configure RowVersion for Student ----------
-            builder.Entity<Student>()
+            modelBuilder.Entity<Student>()
                 .Property(s => s.RowVersion)
                 .IsRowVersion()
                 .IsConcurrencyToken();
 
             // ---------- NEW: Map Student date columns and PaymentStatus ----------
-            builder.Entity<Student>(entity =>
+            modelBuilder.Entity<Student>(entity =>
             {
                 // BirthDate: store as datetime2 (nullable)
                 entity.Property(e => e.BirthDate)
@@ -82,61 +96,4 @@ namespace Attendance.Data.Conext
             });
         }
     }
-
-    //public class ApplicationDbContext : IdentityDbContext
-    //{
-    //    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
-
-    //    public DbSet<Student> Students { get; set; } = null!;
-    //    public DbSet<Teacher> Teachers { get; set; } = null!;
-    //    public DbSet<Class> Classes { get; set; } = null!;
-    //    public DbSet<AttendanceTable> Attendances { get; set; } = null!;
-
-    //    protected override void OnModelCreating(ModelBuilder builder)
-    //    {
-    //        base.OnModelCreating(builder);
-
-    //        // ---------- Student: Unique Index for NationalCode (فقط رکوردهای فعال) ----------
-    //        builder.Entity<Student>()
-    //            .HasIndex(s => s.NationalCode)
-    //            .IsUnique()
-    //            .HasFilter("[NationalCode] IS NOT NULL AND [IsActive] = 1");
-
-    //        // ---------- AttendanceTable: LateBy column mapping ----------
-    //        builder.Entity<AttendanceTable>()
-    //            .Property(a => a.LateBy)
-    //            .HasColumnType("time");
-
-    //        // جلوگیری از ثبت چند ردیف حضور برای یک دانش‌آموز در همان روز
-    //        builder.Entity<AttendanceTable>()
-    //            .HasIndex(a => new { a.StudentId, a.Date })
-    //            .IsUnique();
-
-    //        // --------- Global Query Filter for Soft Delete ----------
-    //        // برای همه Entity هایی که ISoftDelete را پیاده‌سازی کرده‌اند
-    //        // به طور پیش‌فرض فقط رکوردهای IsActive == true نمایش داده شوند
-    //        foreach (var entityType in builder.Model.GetEntityTypes())
-    //        {
-    //            var clrType = entityType.ClrType;
-    //            if (typeof(ISoftDelete).IsAssignableFrom(clrType))
-    //            {
-    //                // parameter: e =>
-    //                var parameter = Expression.Parameter(clrType, "e");
-    //                // property: e.IsActive
-    //                var prop = Expression.Property(parameter, nameof(ISoftDelete.IsActive));
-    //                // expression: e.IsActive == true
-    //                var condition = Expression.Equal(prop, Expression.Constant(true));
-    //                var lambda = Expression.Lambda(condition, parameter);
-
-    //                builder.Entity(clrType).HasQueryFilter(lambda);
-    //            }
-    //        }
-
-    //        // ---------- Optional: Configure RowVersion for Student ----------
-    //        builder.Entity<Student>()
-    //            .Property(s => s.RowVersion)
-    //            .IsRowVersion()
-    //            .IsConcurrencyToken();
-    //    }
-    //}
 }
