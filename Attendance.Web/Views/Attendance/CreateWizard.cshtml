@@ -62,7 +62,7 @@
                 // show loading
                 Swal.showLoading();
                 try {
-                    const res = await fetch(`@Url.Action("GetStudentsByGrade","Attendance")?grade=${encodeURIComponent(g)}`, {
+                    const res = await fetch(`@Url.Action("GetStudentsByGrade", "Attendance")?grade=${encodeURIComponent(g)}`, {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     if (!res.ok) throw new Error('بارگذاری دانش‌آموزان موفق نبود');
@@ -102,53 +102,80 @@
                 step1.classList.remove('hidden');
             });
 
-            toStep3Btn.addEventListener('click', async function () {
-                const grade = gradeSelect.value;
-                const checked = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(x => parseInt(x.value));
-                if (!grade) return Swal.fire({ icon: 'warning', text: 'پایه انتخاب نشده' });
-                if (!checked.length) return Swal.fire({ icon: 'warning', text: 'هیچ دانش‌آموزی انتخاب نشده' });
+        toStep3Btn.addEventListener('click', async function () {
+            const grade = gradeSelect.value;
+            const checked = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(x => x.value);
+            if (!grade) return Swal.fire({ icon: 'warning', text: 'پایه انتخاب نشده' });
+            if (!checked.length) return Swal.fire({ icon: 'warning', text: 'هیچ دانش‌آموزی انتخاب نشده' });
 
-                // ask title via Swal and get today's shamsi date
-                const todayShamsi = (new Date()).toLocaleDateString('fa-IR-u-nu-latn'); // approximate
-                const { value: title } = await Swal.fire({
-                    title: 'نام جلسه را وارد کنید',
-                    input: 'text',
-                    inputLabel: `تاریخ جلسه (شمسی): ${todayShamsi}`,
-                    inputPlaceholder: 'مثلاً جلسه شماره 1 - جمعه صبح',
-                    preConfirm: v => v && v.trim() ? v.trim() : Swal.showValidationMessage('نام جلسه لازم است')
+            const todayShamsi = (new Date()).toLocaleDateString('fa-IR-u-nu-latn');
+            const { value: title } = await Swal.fire({
+                title: 'نام جلسه را وارد کنید',
+                input: 'text',
+                inputLabel: `تاریخ جلسه (شمسی): ${todayShamsi}`,
+                inputPlaceholder: 'مثلاً جلسه شماره 1 - جمعه صبح',
+                preConfirm: v => v && v.trim() ? v.trim() : Swal.showValidationMessage('نام جلسه لازم است')
+            });
+
+            if (!title) return;
+
+            const fd = new FormData();
+            fd.append('title', title);
+            fd.append('dateShamsi', todayShamsi);
+            fd.append('grade', grade);
+            // append multiple values with same key -> binder سرور معمولاً آن را به لیست تبدیل می‌کند
+            checked.forEach(id => fd.append('studentIds', id));
+
+            // antiforgery token (اگر داخل فرم موجود است)
+            const anti = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            if (anti) fd.append('__RequestVerificationToken', anti);
+
+            Swal.fire({ title: 'در حال ایجاد جلسه...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            try {
+                const resp = await fetch('@Url.Action("CreateSession", "Attendance")', {
+                    method: 'POST',
+                    // مهم: ارسال کوکی‌ها/نشست برای اعتبارسنجی antiforgery
+                    credentials: 'same-origin',
+                    body: fd
                 });
 
-                if (!title) return;
+                // برای تشخیص خطا، متن پاسخ را بخوان و لاگ کن
+                const text = await resp.text();
+                let json = null;
+                try { json = JSON.parse(text); } catch (e) { /* not JSON */ }
 
-                // submit via POST form (use Fetch with form data)
-                const fd = new FormData();
-                fd.append('title', title);
-                fd.append('dateShamsi', todayShamsi);
-                fd.append('grade', grade);
-                checked.forEach(id => fd.append('studentIds', id));
+                console.log('CreateSession response status:', resp.status, 'body:', text, 'parsed:', json);
 
-                Swal.fire({ title: 'در حال ایجاد جلسه...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                try {
-                    const resp = await fetch('@Url.Action("CreateSession","Attendance")', {
-                        method: 'POST',
-                        headers: { 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
-                        body: fd
-                    });
-
-                    if (resp.redirected) {
-                        window.location.href = resp.url; // معمولاً به SessionDetails هدایت می‌شود
-                        return;
-                    }
-
-                    if (!resp.ok) throw new Error('خطا در ایجاد جلسه');
-                    const txt = await resp.text();
-                    // در صورت برگرداندن HTML یا پیام، ریدایرکت کنیم یا نمایش دهیم
-                    window.location.reload();
-                } catch (err) {
-                    console.error(err);
-                    Swal.fire({ icon: 'error', title: 'خطا', text: 'ایجاد جلسه موفق نبود.' });
+                if (!resp.ok) {
+                    // تلاش کن پیغام خطای قابل‌فهم را نمایش بده
+                    const message = (json && (json.message || json.error)) ? (json.message || json.error) :
+                        text || `خطا: status ${resp.status}`;
+                    Swal.close();
+                    return Swal.fire({ icon: 'error', title: 'خطا در ایجاد جلسه', text: message });
                 }
-            });
+
+                // اگر سرور ریدایرکت می‌کند (مثلاً به Details) یا id برمی‌گرداند، رفتار مناسب انجام شود
+                if (resp.redirected) {
+                    window.location.href = resp.url;
+                    return;
+                }
+
+                // اگر JSON با id برمی‌گردد -> به جزئیات برو، در غیر اینصورت رفرش
+                if (json && json.id) {
+                    Swal.fire({ icon: 'success', title: 'موفق', text: json.message || 'جلسه ایجاد شد.' })
+                        .then(() => window.location.href = `/Attendance/SessionDetails/${json.id}`);
+                } else {
+                    // fallback: رفرش صفحه یا نمایش موفقیت
+                    Swal.fire({ icon: 'success', title: 'موفق', text: (json && json.message) ? json.message : 'جلسه ایجاد شد.' })
+                        .then(() => window.location.reload());
+                }
+            } catch (err) {
+                console.error('CreateSession unexpected error', err);
+                Swal.close();
+                Swal.fire({ icon: 'error', title: 'خطا', text: 'ایجاد جلسه موفق نبود. جزئیات در کنسول لاگ شد.' });
+            }
+        });
         })();
     </script>
 }
