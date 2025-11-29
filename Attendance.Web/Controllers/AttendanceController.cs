@@ -1,49 +1,60 @@
 ﻿using Attendance.Data.Conext;
 using Attendance.Data.Entities;
 using Attendance.Web.Helpers;
+using Attendance.Web.Hubs;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Attendance.Web.Controllers
 {
+    // مسیر صریح برای جلوگیری از AmbiguousMatchException و مشخص کردن مسیرها
+    [Route("Attendance/[action]")]
     public class AttendanceController : Controller
     {
         private readonly ApplicationDbContext _db;
         private readonly ILogger<AttendanceController> _logger;
+        private readonly IHubContext<StudentsHub> _hub; // فرض بر این است که hub با این نام وجود دارد
 
-        public AttendanceController(ApplicationDbContext db, ILogger<AttendanceController> logger)
+        public AttendanceController(ApplicationDbContext db, ILogger<AttendanceController> logger, IHubContext<StudentsHub> hub)
         {
             _db = db;
             _logger = logger;
+            _hub = hub;
         }
 
-        // ========== Wizard start: انتخاب پایه و دیدن لیست دانش آموزان ==========
+        // ---------- CreateWizard (GET) ----------
         [HttpGet]
         public async Task<IActionResult> CreateWizard()
         {
-            // لیست پایه‌ها را از Student استخراج کن و به ویو بده
+            // اگر نیاز به بارگذاری اطلاعات (مثلاً لیست پایه‌ها) هست
             var grades = await _db.Students
-                                  .AsNoTracking()
-                                  .Where(s => !string.IsNullOrEmpty(s.Grade))
-                                  .Select(s => s.Grade)
-                                  .Distinct()
-                                  .OrderBy(x => x)
-                                  .ToListAsync();
+                .AsNoTracking()
+                .Select(s => s.Grade ?? "")
+                .Distinct()
+                .OrderBy(g => g)
+                .ToListAsync();
 
-            return View("CreateWizard", grades); // ویو CreateWizard.cshtml (در ادامه کد ویو)
+            ViewBag.Grades = new SelectList(grades);
+            return View(); // View CreateWizard باید وجود داشته باشد
         }
 
-        // Endpoint برای گرفتن دانش‌آموزان یک پایه (AJAX)
+        // ---------- GetStudentsByGrade (AJAX) ----------
+        // برمی‌گرداند JSON شامل لیست دانش‌آموزان برای پایه خواسته‌شده
         [HttpGet]
         public async Task<IActionResult> GetStudentsByGrade(string grade)
         {
-            if (string.IsNullOrWhiteSpace(grade)) return BadRequest("grade required");
+            if (string.IsNullOrWhiteSpace(grade))
+                return BadRequest("grade required");
 
             var students = await _db.Students
                 .AsNoTracking()
-                .Where(s => s.Grade == grade)
-                .OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
-                .Select(s => new {
+                .Where(s => (s.Grade ?? "") == grade)
+                .OrderBy(s => s.LastName)
+                .Select(s => new
+                {
                     id = s.Id,
                     firstName = s.FirstName,
                     lastName = s.LastName,
@@ -55,26 +66,21 @@ namespace Attendance.Web.Controllers
             return Json(students);
         }
 
-        // Create session + pre-create AttendanceRecord entries from selected student ids
+        // ---------- CreateSession (POST - non-ajax form submit) ----------
+        // مسیر صریح: Attendance/CreateSession
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateSession([FromForm] string title, [FromForm] string dateShamsi, [FromForm] string grade, [FromForm] int[] studentIds)
         {
+            // این متد همان متدی است که برای فرم‌های معمولی (non-AJAX) ریدایرکت می‌کند
             try
             {
                 if (string.IsNullOrWhiteSpace(title)) return BadRequest("title required");
                 if (string.IsNullOrWhiteSpace(grade)) return BadRequest("grade required");
 
-                // تبدیل تاریخ شمسـی به UTC
-                DateTime sessionUtc;
-                if (!string.IsNullOrWhiteSpace(dateShamsi))
-                {
-                    sessionUtc = PersianDateConverter.ParseShamsiToUtc(dateShamsi) ?? DateTime.UtcNow;
-                }
-                else
-                {
-                    sessionUtc = DateTime.UtcNow;
-                }
+                DateTime sessionUtc = !string.IsNullOrWhiteSpace(dateShamsi)
+                    ? (PersianDateConverter.ParseShamsiToUtc(dateShamsi) ?? DateTime.UtcNow)
+                    : DateTime.UtcNow;
 
                 var session = new AttendanceSession
                 {
@@ -85,7 +91,6 @@ namespace Attendance.Web.Controllers
                     CreatedAt = DateTime.UtcNow
                 };
 
-                // اضافه کن رکوردهای حاضر/غایب را به صورت پیش‌فرض (IsPresent=false) ایجاد کن
                 foreach (var sid in (studentIds ?? Array.Empty<int>()))
                 {
                     session.Records.Add(new AttendanceRecord
@@ -102,18 +107,119 @@ namespace Attendance.Web.Controllers
                 _logger.LogInformation("Attendance session {SessionId} created by {User} for grade {Grade} with {Count} students",
                     session.Id, User?.Identity?.Name, grade, session.Records.Count);
 
-                // بعد از ایجاد، هدایت به صفحه جزئیات جلسه جهت ثبت حضور/غیاب
+                // ارسال رویداد real-time (SignalR) - اگر نیاز دارید می‌توانید payload تنظیم شود
+                try
+                {
+                    await _hub.Clients.All.SendAsync("AttendanceSessionCreated", new { id = session.Id, title = session.Title, grade = session.Grade });
+                }
+                catch (Exception exHub)
+                {
+                    _logger.LogWarning(exHub, "Failed to broadcast AttendanceSessionCreated for session {SessionId}", session.Id);
+                }
+
                 return RedirectToAction(nameof(SessionDetails), new { id = session.Id });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating attendance session for grade {Grade} by {User}", grade, User?.Identity?.Name);
                 TempData["ErrorMessage"] = "خطا در ایجاد جلسه حضور و غیاب.";
-                return RedirectToAction("CreateWizard");
+                return RedirectToAction(nameof(CreateWizard));
             }
         }
 
-        // نمایش جزئیات جلسه و لیست دانش‌آموزان برای مارک زدن حاضر/غایب
+        // ---------- CreateSessionAjax (POST - AJAX) ----------
+        // مخصوص درخواست‌های AJAX که توکن antiforgery را در هدر "RequestVerificationToken" می‌فرستند
+        // اضافه کردن using های لازم در بالای فایل اگر نیست:
+        // using Microsoft.AspNetCore.Hosting;
+        // using Microsoft.Extensions.Logging;
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Route("Attendance/CreateSessionAjax")] // مطمئن می‌شویم مسیر یکتا باشد
+        public async Task<IActionResult> CreateSessionAjax([FromForm] string title, [FromForm] string dateShamsi, [FromForm] string grade, [FromForm] int[]? studentIds)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(title))
+                    return BadRequest(new { error = "عنوان جلسه الزامی است." });
+
+                if (string.IsNullOrWhiteSpace(grade))
+                    return BadRequest(new { error = "پایه الزامی است." });
+
+                // Log دریافت پارامترها (برای دیباگ)
+                _logger?.LogInformation("CreateSessionAjax called by {User}. grade={Grade}, countStudents={Count}",
+                    User?.Identity?.Name ?? "anonymous",
+                    grade,
+                    (studentIds?.Length ?? 0));
+
+                // تبدیل تاریخ شمسی اگر ارسال شده
+                DateTime sessionUtc;
+                if (!string.IsNullOrWhiteSpace(dateShamsi))
+                {
+                    var parsed = PersianDateConverter.ParseShamsiToUtc(dateShamsi);
+                    sessionUtc = parsed ?? DateTime.UtcNow;
+                }
+                else
+                {
+                    sessionUtc = DateTime.UtcNow;
+                }
+
+                var session = new AttendanceSession
+                {
+                    Title = title.Trim(),
+                    SessionDate = sessionUtc,
+                    Grade = grade,
+                    CreatedBy = User?.Identity?.Name,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                // اگر studentIds null باشد، هیچ رکوردی اضافه نشود ولی اجازه می‌دهیم (یا می‌توانید BadRequest دهید)
+                var ids = studentIds ?? Array.Empty<int>();
+                foreach (var sid in ids)
+                {
+                    session.Records.Add(new AttendanceRecord
+                    {
+                        StudentId = sid,
+                        IsPresent = false,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
+                _db.AttendanceSessions.Add(session);
+                await _db.SaveChangesAsync();
+
+                _logger?.LogInformation("Attendance session {SessionId} created by {User} for grade {Grade} with {Count} students",
+                    session.Id, User?.Identity?.Name, grade, session.Records.Count);
+
+                // برگرداندن JSON مناسب برای AJAX
+                return Json(new { id = session.Id, message = "جلسه با موفقیت ایجاد شد." });
+            }
+            catch (Exception ex)
+            {
+                // لاگ کامل خطا
+                _logger?.LogError(ex, "Error creating attendance session for grade {Grade} by {User}", grade, User?.Identity?.Name);
+
+                // در حالت توسعه اجازه بدهیم جزئیات را ببینیم، وگرنه پیام عمومی برگردان
+                var isDev = false;
+                try
+                {
+                    // اگر کنترلر شما DI برای IWebHostEnvironment دارد:
+                    var env = HttpContext.RequestServices.GetService(typeof(IWebHostEnvironment)) as IWebHostEnvironment;
+                    isDev = env != null && env.IsDevelopment();
+                }
+                catch { /* ignore */ }
+
+                if (isDev)
+                {
+                    return StatusCode(500, new { error = "خطا در ایجاد جلسه حضور و غیاب.", detail = ex.ToString() });
+                }
+
+                return StatusCode(500, new { error = "خطا در ایجاد جلسه حضور و غیاب." });
+            }
+        }
+
+
+        // ---------- SessionDetails (GET) - ناظر بعد از ایجاد جلسه ----------
         [HttpGet]
         public async Task<IActionResult> SessionDetails(int id)
         {
@@ -125,43 +231,10 @@ namespace Attendance.Web.Controllers
 
             if (session == null) return NotFound();
 
-            return View("SessionDetails", session); // ویو SessionDetails.cshtml
+            // ViewModel یا VM می‌توانید تعریف کنید؛ برای نمونه مدل مستقیم ارسال می‌شود
+            return View(session);
         }
 
-        // ذخیره‌سازی حضور/غیاب — دریافت آرایه‌ی ids و وضعیت پرزنت
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveSessionAttendance(int sessionId, [FromForm] int[] presentStudentIds)
-        {
-            try
-            {
-                var session = await _db.AttendanceSessions
-                    .Include(s => s.Records)
-                    .FirstOrDefaultAsync(s => s.Id == sessionId);
-
-                if (session == null) return NotFound();
-
-                // به‌روزرسانی رکوردها
-                var presentSet = new HashSet<int>(presentStudentIds ?? Array.Empty<int>());
-
-                foreach (var rec in session.Records)
-                {
-                    rec.IsPresent = presentSet.Contains(rec.StudentId);
-                }
-
-                await _db.SaveChangesAsync();
-
-                _logger.LogInformation("Attendance saved for session {SessionId} by {User}", sessionId, User?.Identity?.Name);
-
-                TempData["SuccessMessage"] = "حضور و غیاب با موفقیت ثبت شد.";
-                return RedirectToAction(nameof(SessionDetails), new { id = sessionId });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error saving attendance for session {SessionId} by {User}", sessionId, User?.Identity?.Name);
-                TempData["ErrorMessage"] = "خطا در ذخیره حضور و غیاب.";
-                return RedirectToAction(nameof(SessionDetails), new { id = sessionId });
-            }
-        }
+        // دیگر اکشن‌ها (در صورت نیاز)...
     }
 }
