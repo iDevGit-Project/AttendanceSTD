@@ -83,6 +83,352 @@
 
     <script>
         (function () {
+            // DOM
+            const gradeSelect = document.getElementById('wizard-grade');
+            const toStep2Btn = document.getElementById('to-step-2');
+            const step1 = document.getElementById('step-1');
+            const step2 = document.getElementById('step-2');
+            const backBtn = document.getElementById('back-to-step-1');
+            const studentsList = document.getElementById('students-list');
+            const selectedGradeSpan = document.getElementById('selected-grade');
+            const toStep3Btn = document.getElementById('to-step-3');
+
+            function getAntiForgeryToken() {
+                const el = document.querySelector('input[name="__RequestVerificationToken"]');
+                return el ? el.value : null;
+            }
+
+            // Step1 -> fetch students by grade
+            toStep2Btn.addEventListener('click', async function () {
+                const g = gradeSelect.value;
+                if (!g) { Swal.fire({ icon: 'warning', title: 'لطفاً یک پایه انتخاب کنید' }); return; }
+
+                Swal.fire({ title: 'در حال بارگذاری دانش‌آموزان...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+                try {
+                    // use Url.Action to build URL server-side then replace placeholder to avoid razor encoding issues
+                    const urlTemplate = '@Url.Action("GetStudentsByGrade", "Attendance")?grade=PLACEHOLDER';
+                    const url = urlTemplate.replace('PLACEHOLDER', encodeURIComponent(g));
+
+                    const res = await fetch(url, { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
+                    if (!res.ok) { const txt = await res.text(); console.error('GetStudentsByGrade failed', res.status, txt); throw new Error('بارگذاری دانش‌آموزان موفق نبود'); }
+                    const data = await res.json();
+
+                    studentsList.innerHTML = '';
+                    data.forEach(s => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center gap-3 p-2 border rounded';
+                        div.innerHTML = `
+                            <input type="checkbox" class="student-checkbox" value="${s.id}" id="st-${s.id}" checked />
+                            <img src="${s.photo || '/uploads/students/default.png'}" class="w-10 h-10 rounded object-cover" alt="photo-${s.id}" />
+                            <div class="flex-1">
+                                <div class="font-bold">${s.firstName || ''} ${s.lastName || ''}</div>
+                                <div class="text-xs text-slate-500">${s.nationalCode || ''}</div>
+                            </div>
+                        `;
+                        studentsList.appendChild(div);
+                    });
+
+                    selectedGradeSpan.textContent = g;
+                    step1.classList.add('hidden');
+                    step2.classList.remove('hidden');
+                } catch (err) {
+                    console.error(err);
+                    Swal.fire({ icon: 'error', title: 'خطا', text: 'بارگذاری لیست دانش‌آموزان ناموفق بود.' });
+                } finally {
+                    Swal.close();
+                }
+            });
+
+            backBtn.addEventListener('click', function () {
+                step2.classList.add('hidden');
+                step1.classList.remove('hidden');
+            });
+
+            // Step2 -> Create (AJAX) : ask both title and location in one modal and post
+            toStep3Btn.addEventListener('click', async function () {
+                const grade = gradeSelect.value;
+                const checked = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(x => parseInt(x.value, 10));
+
+                if (!grade) return Swal.fire({ icon: 'warning', text: 'پایه انتخاب نشده' });
+                if (!checked.length) return Swal.fire({ icon: 'warning', text: 'هیچ دانش‌آموزی انتخاب نشده' });
+
+                // create an html form inside swal for Title and Location
+                const todayShamsi = (new Date()).toLocaleDateString('fa-IR-u-nu-latn');
+
+                const { value: formValues } = await Swal.fire({
+                    title: 'تکمیل اطلاعات جلسه',
+                    html:
+                        `<label class="sr-only">نام جلسه</label>
+                         <input id="swal-input-title" class="swal2-input" placeholder="مثلاً جلسه شماره 1 - جمعه صبح">
+                         <label class="sr-only">مکان</label>
+                         <input id="swal-input-location" class="swal2-input" placeholder="مکان برگزاری (مثلاً مدرسه منطقه 1)">
+                         <div class="text-xs text-slate-500 mt-1">تاریخ جلسه (شمسی): ${todayShamsi}</div>`,
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        const t = document.getElementById('swal-input-title')?.value || '';
+                        const loc = document.getElementById('swal-input-location')?.value || '';
+                        if (!t || !t.trim()) {
+                            Swal.showValidationMessage('نام جلسه لازم است');
+                            return null;
+                        }
+                        return { title: t.trim(), location: loc.trim() };
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: 'ایجاد جلسه',
+                    cancelButtonText: 'انصراف'
+                });
+
+                if (!formValues) return; // canceled or invalid
+
+                const { title, location } = formValues;
+
+                // build form data
+                const fd = new FormData();
+                fd.append('title', title);
+                fd.append('dateShamsi', todayShamsi);
+                fd.append('grade', grade);
+                fd.append('location', location || '');
+                checked.forEach(id => fd.append('studentIds', id.toString()));
+
+                const token = getAntiForgeryToken();
+                if (!token) {
+                    console.error('Anti-forgery token not found in DOM.');
+                    return Swal.fire({ icon: 'error', title: 'خطا', text: 'توکن امنیتی پیدا نشد. صفحه را رفرش کنید و مجدداً تلاش کنید.' });
+                }
+
+                Swal.fire({ title: 'در حال ایجاد جلسه...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                try {
+                    const postUrl = '@Url.Action("CreateSessionAjax", "Attendance")';
+
+                    const resp = await fetch(postUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        body: fd,
+                        headers: {
+                            'RequestVerificationToken': token
+                        }
+                    });
+
+                    const text = await resp.text();
+                    let json = null;
+                    try { json = JSON.parse(text); } catch (e) { /* not json */ }
+
+                    console.log('CreateSessionAjax: sending POST to', postUrl, { grade, countStudents: checked.length });
+                    console.log('CreateSessionAjax response:', { status: resp.status, redirected: resp.redirected, url: resp.url, bodyText: text, parsed: json });
+
+                    if (!resp.ok) {
+                        const message = (json && (json.error || json.message)) ? (json.error || json.message) : (text || `خطا: ${resp.status}`);
+                        Swal.close();
+                        return Swal.fire({ icon: 'error', title: 'خطا در ایجاد جلسه', text: message });
+                    }
+
+                    if (json && json.id) {
+                        Swal.fire({ icon: 'success', title: 'موفق', text: json.message || 'جلسه ایجاد شد.' })
+                            .then(() => window.location.href = `/Attendance/SessionDetails/${json.id}`);
+                        return;
+                    }
+
+                    Swal.fire({ icon: 'success', title: 'موفق', text: (json && json.message) ? json.message : 'جلسه ایجاد شد.' })
+                        .then(() => window.location.reload());
+                } catch (err) {
+                    console.error('CreateSession unexpected error', err);
+                    Swal.close();
+                    Swal.fire({ icon: 'error', title: 'خطا', text: 'ایجاد جلسه موفق نبود. جزئیات در کنسول لاگ شد.' });
+                }
+            });
+
+        })();
+    </script>
+}
+
+
+@* @section CreateWizardSesstionScripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        (function () {
+            // عناصر DOM
+            const gradeSelect = document.getElementById('wizard-grade');
+            const toStep2Btn = document.getElementById('to-step-2');
+            const step1 = document.getElementById('step-1');
+            const step2 = document.getElementById('step-2');
+            const backBtn = document.getElementById('back-to-step-1');
+            const studentsList = document.getElementById('students-list');
+            const selectedGradeSpan = document.getElementById('selected-grade');
+            const toStep3Btn = document.getElementById('to-step-3');
+
+            function getAntiForgeryToken() {
+                const el = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (el && el.value) return el.value;
+                // fallback: try cookie (اگر شما antiforgery cookie نامی دارید)
+                return null;
+            }
+
+            // Step 1 -> Step 2
+            toStep2Btn.addEventListener('click', async function () {
+                const g = gradeSelect.value;
+                if (!g) {
+                    Swal.fire({ icon: 'warning', title: 'لطفاً یک پایه انتخاب کنید' });
+                    return;
+                }
+
+                Swal.fire({ title: 'در حال بارگذاری دانش‌آموزان...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+                try {
+                    const urlTemplate = `@Url.Action("GetStudentsByGrade", "Attendance")?grade=PLACEHOLDER`;
+                    const finalUrl = urlTemplate.replace('PLACEHOLDER', encodeURIComponent(g));
+                    const res = await fetch(finalUrl, {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
+                    });
+
+                    if (!res.ok) {
+                        const txt = await res.text();
+                        console.error('GetStudentsByGrade failed', res.status, txt);
+                        throw new Error('بارگذاری دانش‌آموزان موفق نبود');
+                    }
+
+                    const data = await res.json();
+                    studentsList.innerHTML = '';
+                    data.forEach(s => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center gap-3 p-2 border rounded';
+                        div.innerHTML = `
+                            <input type="checkbox" class="student-checkbox" value="${s.id}" id="st-${s.id}" checked />
+                            <img src="${s.photo}" class="w-10 h-10 rounded object-cover" alt="photo-${s.id}" />
+                            <div class="flex-1">
+                                <div class="font-bold">${s.firstName} ${s.lastName}</div>
+                                <div class="text-xs text-slate-500">${s.nationalCode ?? ''}</div>
+                            </div>
+                        `;
+                        studentsList.appendChild(div);
+                    });
+
+                    selectedGradeSpan.textContent = g;
+                    step1.classList.add('hidden');
+                    step2.classList.remove('hidden');
+                } catch (err) {
+                    console.error(err);
+                    Swal.fire({ icon: 'error', title: 'خطا', text: 'بارگذاری لیست دانش‌آموزان ناموفق بود.' });
+                } finally {
+                    Swal.close();
+                }
+            });
+
+            // back
+            backBtn.addEventListener('click', function () {
+                step2.classList.add('hidden');
+                step1.classList.remove('hidden');
+            });
+
+            // Step 2 -> Create session (AJAX)
+            toStep3Btn.addEventListener('click', async function () {
+                const grade = gradeSelect.value;
+                const checked = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(x => parseInt(x.value, 10));
+
+                if (!grade) {
+                    return Swal.fire({ icon: 'warning', text: 'پایه انتخاب نشده' });
+                }
+                if (!checked.length) {
+                    return Swal.fire({ icon: 'warning', text: 'هیچ دانش‌آموزی انتخاب نشده' });
+                }
+
+                const todayShamsi = (new Date()).toLocaleDateString('fa-IR-u-nu-latn');
+
+                const { value: formValues } = await Swal.fire({
+                    title: 'اطلاعات جلسه',
+                    html:
+                        `<label class="block text-sm text-slate-700 mb-1">نام جلسه</label>
+                         <input id="swal-input-title" class="swal2-input" placeholder="مثلاً جلسه شماره 1 - جمعه صبح">` +
+                        `<label class="block text-sm text-slate-700 mt-2 mb-1">محل برگزاری</label>
+                         <input id="swal-input-location" class="swal2-input" placeholder="مثلاً مدرسه امام خمینی یا سالن اجتماعات">` +
+                        `<div class="text-xs text-slate-400 mt-1">تاریخ جلسه (شمسی): ${todayShamsi}</div>`,
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        const t = document.getElementById('swal-input-title')?.value?.trim();
+                        const loc = document.getElementById('swal-input-location')?.value?.trim() ?? '';
+                        if (!t) {
+                            Swal.showValidationMessage('نام جلسه لازم است');
+                            return false;
+                        }
+                        return { title: t, location: loc };
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: 'ایجاد و ادامه',
+                    cancelButtonText: 'انصراف'
+                });
+
+                if (!formValues) return; // کاربر انصراف زده
+
+                const title = formValues.title;
+                const location = formValues.location;
+
+                const fd = new FormData();
+                fd.append('title', title);
+                fd.append('dateShamsi', todayShamsi);
+                fd.append('grade', grade);
+                fd.append('location', location || '');
+                checked.forEach(id => fd.append('studentIds', id));
+
+                const token = getAntiForgeryToken();
+                if (!token) {
+                    console.error('Anti-forgery token not found in DOM.');
+                    return Swal.fire({ icon: 'error', title: 'خطا', text: 'توکن امنیتی پیدا نشد. صفحه را رفرش کنید و مجدداً تلاش کنید.' });
+                }
+                // فرم‌دیتا را هم با فیلد توکن پر میکنیم تا binder آن را دریافت کند
+                fd.append('__RequestVerificationToken', token);
+
+                Swal.fire({ title: 'در حال ایجاد جلسه...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+                try {
+                    const resp = await fetch('@Url.Action("CreateSessionAjax", "Attendance")', {
+                        method: 'POST',
+                        body: fd,
+                        credentials: 'same-origin',
+                        headers: {
+                            // برخی تنظیمات antiforgery header را نیز می‌خوانند؛ ایمنی بیشتر:
+                            'RequestVerificationToken': token
+                        }
+                    });
+
+                    const bodyText = await resp.text();
+                    let parsed = null;
+                    try { parsed = JSON.parse(bodyText); } catch (e) { /* not JSON */ }
+
+                    console.log('CreateSessionAjax response:', { status: resp.status, redirected: resp.redirected, url: resp.url, bodyText, parsed });
+
+                    if (!resp.ok) {
+                        const message = (parsed && (parsed.error || parsed.message)) ? (parsed.error || parsed.message) :
+                            (bodyText && bodyText.length ? bodyText : `خطا: ${resp.status}`);
+                        Swal.close();
+                        return Swal.fire({ icon: 'error', title: 'خطا در ایجاد جلسه', text: message });
+                    }
+
+                    if (parsed && parsed.id) {
+                        Swal.fire({ icon: 'success', title: 'موفق', text: parsed.message || 'جلسه ایجاد شد.' })
+                            .then(() => window.location.href = `/Attendance/SessionDetails/${parsed.id}`);
+                        return;
+                    }
+
+                    Swal.fire({ icon: 'success', title: 'موفق', text: (parsed && parsed.message) ? parsed.message : 'جلسه ایجاد شد.' })
+                        .then(() => window.location.reload());
+
+                } catch (err) {
+                    console.error('CreateSession unexpected error', err);
+                    Swal.close();
+                    Swal.fire({ icon: 'error', title: 'خطا', text: 'ایجاد جلسه موفق نبود. جزئیات در کنسول لاگ شد.' });
+                }
+            });
+
+        })();
+    </script>
+} *@
+
+@* @section CreateWizardSesstionScripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function () {
             // عناصر DOM
             const gradeSelect = document.getElementById('wizard-grade');
             const toStep2Btn = document.getElementById('to-step-2');
@@ -247,221 +593,4 @@
 
         })();
     </script>
-
-}
-
-@* @model List<string>
-@{
-    ViewData["Title"] = "ایجاد جلسه جدید حضور و غیاب";
-}
-
-<div class="bg-white rounded-lg p-6">
-    <h2 class="text-lg font-bold mb-3">ایجاد جلسه حضور و غیاب - ویزارد</h2>
-
-    <div id="wizard">
-        <div id="step-1" class="space-y-3">
-            <label class="block text-sm font-medium">انتخاب پایه</label>
-            <select id="wizard-grade" class="border rounded px-3 py-2 w-60">
-                <option value="">-- انتخاب پایه --</option>
-                @foreach (var g in Model)
-                {
-                    <option value="@g">@g</option>
-                }
-            </select>
-
-            <div>
-                <button id="to-step-2" class="px-3 py-2 bg-blue-600 text-white rounded">مرحله بعد — مشاهده دانش‌آموزان</button>
-            </div>
-        </div>
-
-        <div id="step-2" class="hidden space-y-3">
-            <div>
-                <button id="back-to-step-1" class="px-3 py-2 bg-slate-100 rounded">بازگشت</button>
-            </div>
-
-            <div>
-                <h3 class="font-bold">دانش‌آموزان پایه: <span id="selected-grade"></span></h3>
-                <div id="students-list" class="grid grid-cols-1 gap-2 mt-3"></div>
-            </div>
-
-            <div class="mt-4">
-                <button id="to-step-3" class="px-3 py-2 bg-green-600 text-white rounded">مرحله بعد — تأیید و ایجاد جلسه</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section CreateWizardSessionScripts {
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <script>
-        (function () {
-            // عناصر DOM
-            const gradeSelect = document.getElementById('wizard-grade');
-            const toStep2Btn = document.getElementById('to-step-2');
-            const step1 = document.getElementById('step-1');
-            const step2 = document.getElementById('step-2');
-            const backBtn = document.getElementById('back-to-step-1');
-            const studentsList = document.getElementById('students-list');
-            const selectedGradeSpan = document.getElementById('selected-grade');
-            const toStep3Btn = document.getElementById('to-step-3');
-
-            function getAntiForgeryToken() {
-                const el = document.querySelector('input[name="__RequestVerificationToken"]');
-                return el ? el.value : null;
-            }
-
-            // مرحله 1 -> مرحله 2: بارگذاری دانش‌آموزان بر اساس پایه انتخابی
-            toStep2Btn.addEventListener('click', async function () {
-                const g = gradeSelect.value;
-                if (!g) {
-                    Swal.fire({ icon: 'warning', title: 'لطفاً یک پایه انتخاب کنید' });
-                    return;
-                }
-
-                Swal.fire({ title: 'در حال بارگذاری دانش‌آموزان...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
-
-                try {
-                    const url = `@Url.Action("GetStudentsByGrade", "Attendance")?grade=${encodeURIComponent(g)}`;
-                    const res = await fetch(url, {
-                        method: 'GET',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        credentials: 'same-origin'
-                    });
-
-                    if (!res.ok) {
-                        const txt = await res.text();
-                        console.error('GetStudentsByGrade failed', res.status, txt);
-                        throw new Error('بارگذاری دانش‌آموزان موفق نبود');
-                    }
-
-                    const data = await res.json();
-
-                    studentsList.innerHTML = '';
-                    data.forEach(s => {
-                        const div = document.createElement('div');
-                        div.className = 'flex items-center gap-3 p-2 border rounded';
-                        // id attribute on checkbox must be unique and numeric value should be safe
-                        div.innerHTML = `
-                            <input type="checkbox" class="student-checkbox" value="${s.id}" id="st-${s.id}" checked />
-                            <img src="${s.photo}" class="w-10 h-10 rounded object-cover" />
-                            <div class="flex-1">
-                                <div class="font-bold">${s.firstName} ${s.lastName}</div>
-                                <div class="text-xs text-slate-500">${s.nationalCode ?? ''}</div>
-                            </div>
-                        `;
-                        studentsList.appendChild(div);
-                    });
-
-                    selectedGradeSpan.textContent = g;
-                    step1.classList.add('hidden');
-                    step2.classList.remove('hidden');
-                } catch (err) {
-                    console.error(err);
-                    Swal.fire({ icon: 'error', title: 'خطا', text: 'بارگذاری لیست دانش‌آموزان ناموفق بود.' });
-                } finally {
-                    Swal.close();
-                }
-            });
-
-            // بازگشت به مرحله 1
-            backBtn.addEventListener('click', function () {
-                step2.classList.add('hidden');
-                step1.classList.remove('hidden');
-            });
-
-            // مرحله 2 -> مرحله 3: گرفتن انتخاب‌ها و ارسال درخواست ایجاد جلسه (AJAX)
-            toStep3Btn.addEventListener('click', async function () {
-                const grade = gradeSelect.value;
-                const checked = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(x => parseInt(x.value, 10));
-
-                if (!grade) {
-                    return Swal.fire({ icon: 'warning', text: 'پایه انتخاب نشده' });
-                }
-                if (!checked.length) {
-                    return Swal.fire({ icon: 'warning', text: 'هیچ دانش‌آموزی انتخاب نشده' });
-                }
-
-                // تاریخ شمسی امروز به صورت تقریبی
-                const todayShamsi = (new Date()).toLocaleDateString('fa-IR-u-nu-latn');
-
-                const { value: title } = await Swal.fire({
-                    title: 'نام جلسه را وارد کنید',
-                    input: 'text',
-                    inputLabel: `تاریخ جلسه (شمسی): ${todayShamsi}`,
-                    inputPlaceholder: 'مثلاً جلسه شماره 1 - جمعه صبح',
-                    preConfirm: (v) => {
-                        if (!v || !v.trim()) {
-                            Swal.showValidationMessage('نام جلسه لازم است');
-                        } else {
-                            return v.trim();
-                        }
-                    }
-                });
-
-                if (!title) return;
-
-                // ساخت FormData
-                const fd = new FormData();
-                fd.append('title', title);
-                fd.append('dateShamsi', todayShamsi);
-                fd.append('grade', grade);
-                checked.forEach(id => fd.append('studentIds', id));
-
-                // آنتی‌فورجِری توکن از فرم یا صفحه خوانده می‌شود
-                const token = getAntiForgeryToken();
-                if (!token) {
-                    console.error('Anti-forgery token not found in DOM.');
-                    return Swal.fire({ icon: 'error', title: 'خطا', text: 'توکن امنیتی پیدا نشد. صفحه را رفرش کنید و مجدداً تلاش کنید.' });
-                }
-
-                // نمایش لودینگ و ارسال درخواست AJAX به مسیر CreateSessionAjax
-                Swal.fire({ title: 'در حال ایجاد جلسه...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-                try {
-                    const resp = await fetch('@Url.Action("CreateSessionAjax", "Attendance")', {
-                        method: 'POST',
-                        body: fd,
-                        credentials: 'same-origin',
-                        headers: {
-                            // مهم: نام هدر دقیقا RequestVerificationToken باشد
-                            'RequestVerificationToken': token
-                        }
-                    });
-
-                    const bodyText = await resp.text();
-                    let parsed = null;
-                    try { parsed = JSON.parse(bodyText); } catch (e) { /* ignore non-json */ }
-
-                    console.log('CreateSessionAjax response:', { status: resp.status, redirected: resp.redirected, url: resp.url, bodyText, parsed });
-
-                    if (!resp.ok) {
-                        // اگر JSON خطا داریم، پیام مناسب نشان بده، وگرنه متن خام را
-                        const message = (parsed && (parsed.error || parsed.message)) ? (parsed.error || parsed.message) :
-                            (bodyText && bodyText.length ? bodyText : `خطا: ${resp.status}`);
-                        Swal.close();
-                        return Swal.fire({ icon: 'error', title: 'خطا در ایجاد جلسه', text: message });
-                    }
-
-                    // موفقیت -> اگر id داریم به صفحه جزئیات برو
-                    if (parsed && parsed.id) {
-                        Swal.fire({ icon: 'success', title: 'موفق', text: parsed.message || 'جلسه ایجاد شد.' })
-                            .then(() => window.location.href = `/Attendance/SessionDetails/${parsed.id}`);
-                        return;
-                    }
-
-                    // fallback: اگر JSON غیرمعمول برگشت -> رفرش
-                    Swal.fire({ icon: 'success', title: 'موفق', text: (parsed && parsed.message) ? parsed.message : 'جلسه ایجاد شد.' })
-                        .then(() => window.location.reload());
-
-                } catch (err) {
-                    console.error('CreateSession unexpected error', err);
-                    Swal.close();
-                    Swal.fire({ icon: 'error', title: 'خطا', text: 'ایجاد جلسه موفق نبود. جزئیات در کنسول لاگ شد.' });
-                }
-            });
-        })();
-    </script>
-}
-
- *@
+} *@

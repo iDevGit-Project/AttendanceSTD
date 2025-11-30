@@ -10,24 +10,101 @@ namespace Attendance.Data.Entities
 {
     public class AttendanceSession
     {
-        public int Id { get; set; }
+        /// <summary>
+        /// bigint (PK)
+        /// </summary>
+        public long Id { get; set; }
 
-        public string Title { get; set; } = string.Empty; // نام جلسه (از مدیر دریافت می‌شود)
+        /// <summary>
+        /// nvarchar(250)
+        /// </summary>
+        public string? Title { get; set; }
 
-        // ذخیره به صورت UTC (SessionDate از تاریخ شمسی به UTC تبدیل می‌شود)
-        public DateTime SessionDate { get; set; }
+        /// <summary>
+        /// ستون تاریخ اصلی جدول (نام ستون در دیتابیس: Date)
+        /// از نوع date — در مدل از DateTime? استفاده شده تا مطابقت و انعطاف داشته باشیم.
+        /// </summary>
+        public DateTime? Date { get; set; }
 
-        // مکان اختیاری (در این مرحله می‌توانیم School یا Location را قرار دهیم)
+        /// <summary>
+        /// StartAt (datetime2) - شروع جلسه (اختیاری)
+        /// </summary>
+        public DateTime? StartAt { get; set; }
+
+        /// <summary>
+        /// EndAt (datetime2) - پایان جلسه (اختیاری)
+        /// </summary>
+        public DateTime? EndAt { get; set; }
+
+        /// <summary>
+        /// ClassId (int) - ارجاع اختیاری به کلاس (در صورت داشتن جدول کلاس)
+        /// </summary>
+        public int? ClassId { get; set; }
+
+        /// <summary>
+        /// Location nvarchar(200)
+        /// </summary>
         public string? Location { get; set; }
 
-        // پایه‌ای که این جلسه برای آن تشکیل شده (مهم برای فیلتر/گزارش)
-        public string? Grade { get; set; }
+        /// <summary>
+        /// CreatedById (int) - کاربر ایجادکننده (اگر در سیستم شما شناسه عددی کاربر است)
+        /// مطابق با جدول فعلی که CreatedById دارد.
+        /// </summary>
+        public int? CreatedById { get; set; }
 
-        // کاربری که ایجاد کرده (نام کاربری یا id)
-        public string? CreatedBy { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        /// <summary>
+        /// CreatedAt datetime2 (غیر nullable در جدول شما طبق تصویر)
+        /// </summary>
+        public DateTime CreatedAt { get; set; }
 
-        // Navigation
+        /// <summary>
+        /// ModifiedById (int) - شناسه کاربر ویرایش‌کننده (اختیاری)
+        /// </summary>
+        public int? ModifiedById { get; set; }
+
+        /// <summary>
+        /// ModifiedAt datetime2 (اختیاری)
+        /// </summary>
+        public DateTime? ModifiedAt { get; set; }
+
+        /// <summary>
+        /// DeletedById (int) - شناسه کاربر حذف‌کننده (اختیاری)
+        /// </summary>
+        public int? DeletedById { get; set; }
+
+        /// <summary>
+        /// DeletedAt datetime2 (اختیاری)
+        /// </summary>
+        public DateTime? DeletedAt { get; set; }
+
+        /// <summary>
+        /// Notes nvarchar(2000) - توضیحات دلخواه
+        /// </summary>
+        public string? Notes { get; set; }
+
+        /// <summary>
+        /// Navigation: رکوردهای حضور/غیاب مرتبط با این جلسه
+        /// </summary>
         public ICollection<AttendanceRecord> Records { get; set; } = new List<AttendanceRecord>();
+
+        // --- Convenience helpers (اختیاری ولی مفید) ---
+        // اگر جای دیگری از کد SessionDate یا Grade یا CreatedBy به‌صورت string استفاده شده باشد
+        // باید آن کدها را نیز اصلاح کنیم؛ فعلاً فقط هدر توضیح گذاشتم تا بدانید این مدل دیگر
+        // propertyهایی مثل SessionDate/Grade/CreatedBy (string) را ندارد و باید از ستون‌های بالا استفاده کنید.
+
+        /// <summary>
+        /// برگشت تاریخ و زمان شروع جلسه (اگر StartAt موجود باشد، آن را بازمی‌گرداند؛ در غیر اینصورت اگر Date باشد،
+        /// Date را با زمان 00:00 بازمی‌گرداند). به عنوان یک هِلپر مفید در View/Controller.
+        /// </summary>
+        [NotMapped]
+        public DateTime? SessionStart
+        {
+            get
+            {
+                if (StartAt.HasValue) return StartAt.Value;
+                if (Date.HasValue) return Date.Value.Date;
+                return null;
+            }
+        }
     }
 }

@@ -1,4 +1,96 @@
-﻿@using Attendance.Web.Helpers
+﻿@{
+    ViewData["Title"] = "جزئیات جلسه - " + (Model.Title ?? "");
+}
+
+<div class="bg-white p-6 rounded shadow">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-bold">@Model.Title</h1>
+            <div class="text-sm text-slate-600 mt-1">
+                تاریخ: @((Model.Date.HasValue) ? Model.Date.Value.ToString("yyyy/MM/dd") : "-")
+                @if (Model.StartAt.HasValue)
+                {
+                    <span> - شروع: @Model.StartAt.Value.ToString("HH:mm")</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.Location))
+                {
+                    <div>مکان: @Model.Location</div>
+                }
+            </div>
+        </div>
+        <div>
+            <a asp-action="Index" asp-controller="Attendance" class="px-3 py-2 bg-slate-100 rounded">بازگشت</a>
+        </div>
+    </div>
+
+    <hr class="my-4" />
+
+    <form id="attendance-form">
+        <input type="hidden" name="sessionId" value="@Model.Id" />
+
+        <div class="space-y-2">
+            @foreach (var r in Model.Records)
+            {
+                <div class="flex items-center gap-3 p-2 border rounded" data-record-id="@r.Id">
+                    <input type="checkbox" name="present_@r.Id" class="present-checkbox" data-record-id="@r.Id" @(r.IsPresent ? "checked" : "") />
+                    <img src="@r.StudentPhoto" alt="" class="w-12 h-12 rounded object-cover" />
+                    <div class="flex-1">
+                        <div class="font-bold">@r.StudentName</div>
+                        <div class="text-xs text-slate-500">@r.Note</div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="mt-4">
+            <button type="button" id="saveAttendanceBtn" class="px-4 py-2 bg-green-600 text-white rounded">ذخیره حضور/غیاب</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function(){
+            const btn = document.getElementById('saveAttendanceBtn');
+            btn.addEventListener('click', async function(){
+                const sessionId = document.querySelector('input[name="sessionId"]').value;
+                const records = Array.from(document.querySelectorAll('.present-checkbox')).map(cb => {
+                    return { id: parseInt(cb.dataset.recordId,10), isPresent: !!cb.checked };
+                });
+
+                const fd = new FormData();
+                fd.append('sessionId', sessionId);
+                records.forEach(r => {
+                    fd.append('records[]', JSON.stringify(r));
+                });
+
+                // antiforgery token if you have
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                if (token) fd.append('__RequestVerificationToken', token);
+
+                Swal.fire({title: 'در حال ذخیره...', didOpen: ()=>Swal.showLoading(), allowOutsideClick:false});
+                try {
+                    const resp = await fetch('@Url.Action("SaveAttendance", "Attendance")', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        body: fd
+                    });
+                    const txt = await resp.text();
+                    if (!resp.ok) {
+                        Swal.fire({icon:'error', title:'خطا', text: txt || 'خطا در ذخیره'});
+                        return;
+                    }
+                    Swal.fire({icon:'success', title:'ذخیره شد'}).then(()=> location.reload());
+                } catch(err){
+                    console.error(err);
+                    Swal.fire({icon:'error', title:'خطا', text:'خطا در ارسال درخواست'});
+                }
+            });
+        })();
+    </script>
+}
+@* @using Attendance.Web.Helpers
 @{
     ViewData["Title"] = "جزئیات جلسه حضور و غیاب";
 }
@@ -47,4 +139,4 @@
             <a asp-action="CreateWizard" asp-controller="Attendance" class="px-3 py-2 bg-slate-100 rounded ml-2">بازگشت</a>
         </div>
     </form>
-</div>
+</div> *@
