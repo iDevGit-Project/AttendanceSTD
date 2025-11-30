@@ -67,7 +67,6 @@ namespace Attendance.Web.Controllers
         }
 
         // ---------- CreateSession (POST - non-ajax form submit) ----------
-        // مسیر صریح: Attendance/CreateSession
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateSession([FromForm] string title, [FromForm] string dateShamsi, [FromForm] string grade, [FromForm] int[] studentIds)
@@ -128,53 +127,54 @@ namespace Attendance.Web.Controllers
         }
 
         // ---------- CreateSessionAjax (POST - AJAX) ----------
-        // مخصوص درخواست‌های AJAX که توکن antiforgery را در هدر "RequestVerificationToken" می‌فرستند
-        // اضافه کردن using های لازم در بالای فایل اگر نیست:
-        // using Microsoft.AspNetCore.Hosting;
-        // using Microsoft.Extensions.Logging;
-
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Route("Attendance/CreateSessionAjax")] // مطمئن می‌شویم مسیر یکتا باشد
         public async Task<IActionResult> CreateSessionAjax([FromForm] string title, [FromForm] string dateShamsi, [FromForm] string grade, [FromForm] int[]? studentIds)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(title))
-                    return BadRequest(new { error = "عنوان جلسه الزامی است." });
+                if (string.IsNullOrWhiteSpace(title)) return BadRequest(new { error = "عنوان جلسه الزامی است." });
+                if (string.IsNullOrWhiteSpace(grade)) return BadRequest(new { error = "پایه الزامی است." });
 
-                if (string.IsNullOrWhiteSpace(grade))
-                    return BadRequest(new { error = "پایه الزامی است." });
+                var ids = (studentIds ?? Array.Empty<int>()).Where(i => i > 0).Distinct().ToArray();
 
-                // Log دریافت پارامترها (برای دیباگ)
-                _logger?.LogInformation("CreateSessionAjax called by {User}. grade={Grade}, countStudents={Count}",
-                    User?.Identity?.Name ?? "anonymous",
-                    grade,
-                    (studentIds?.Length ?? 0));
+                _logger?.LogInformation("CreateSessionAjax: user={User}, grade={Grade}, count={Count}, ids={Ids}",
+                    User?.Identity?.Name ?? "anonymous", grade, ids.Length, string.Join(",", ids));
 
-                // تبدیل تاریخ شمسی اگر ارسال شده
-                DateTime sessionUtc;
+                // verify students exist
+                if (ids.Length > 0)
+                {
+                    var existing = await _db.Students.AsNoTracking().Where(s => ids.Contains(s.Id)).Select(s => s.Id).ToListAsync();
+                    var missing = ids.Except(existing).ToArray();
+                    if (missing.Any())
+                    {
+                        _logger?.LogWarning("CreateSessionAjax: missing student ids: {Missing}", string.Join(",", missing));
+                        return BadRequest(new { error = "برخی شناسه‌های دانش‌آموز یافت نشدند.", missing });
+                    }
+                }
+
+                // convert shamsi
+                DateTime sessionUtc = DateTime.UtcNow;
                 if (!string.IsNullOrWhiteSpace(dateShamsi))
                 {
                     var parsed = PersianDateConverter.ParseShamsiToUtc(dateShamsi);
-                    sessionUtc = parsed ?? DateTime.UtcNow;
-                }
-                else
-                {
-                    sessionUtc = DateTime.UtcNow;
+                    if (parsed.HasValue) sessionUtc = parsed.Value;
+                    else _logger?.LogWarning("CreateSessionAjax: could not parse dateShamsi='{DateShamsi}'", dateShamsi);
                 }
 
+                // fallback values to avoid NOT NULL DB errors
+                var creator = User?.Identity?.Name ?? "system";
                 var session = new AttendanceSession
                 {
                     Title = title.Trim(),
                     SessionDate = sessionUtc,
                     Grade = grade,
-                    CreatedBy = User?.Identity?.Name,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedBy = creator,    // <-- set fallback instead of null
+                    CreatedAt = DateTime.UtcNow,
+                    Location = "",          // <-- ensure not-null if DB expects it
+                    Records = new List<AttendanceRecord>()
                 };
 
-                // اگر studentIds null باشد، هیچ رکوردی اضافه نشود ولی اجازه می‌دهیم (یا می‌توانید BadRequest دهید)
-                var ids = studentIds ?? Array.Empty<int>();
                 foreach (var sid in ids)
                 {
                     session.Records.Add(new AttendanceRecord
@@ -186,38 +186,45 @@ namespace Attendance.Web.Controllers
                 }
 
                 _db.AttendanceSessions.Add(session);
-                await _db.SaveChangesAsync();
 
-                _logger?.LogInformation("Attendance session {SessionId} created by {User} for grade {Grade} with {Count} students",
-                    session.Id, User?.Identity?.Name, grade, session.Records.Count);
+                try
+                {
+                    await _db.SaveChangesAsync();
+                    _logger?.LogInformation("CreateSessionAjax: created session {SessionId} by {User}", session.Id, creator);
+                    return Json(new { id = session.Id, message = "جلسه با موفقیت ایجاد شد." });
+                }
+                catch (DbUpdateException dbex)
+                {
+                    _logger?.LogError(dbex, "CreateSessionAjax: DbUpdateException creating session. grade={Grade}", grade);
 
-                // برگرداندن JSON مناسب برای AJAX
-                return Json(new { id = session.Id, message = "جلسه با موفقیت ایجاد شد." });
+                    // include inner exception text to help debugging (in dev)
+                    var inner = dbex.InnerException?.Message;
+                    var entriesInfo = dbex.Entries?.Select(en => new {
+                        Type = en.Entity?.GetType().FullName,
+                        State = en.State.ToString(),
+                        Values = en.CurrentValues?.Properties.ToDictionary(p => p.Name, p => en.CurrentValues[p.Name])
+                    }).ToList();
+
+                    var env = HttpContext.RequestServices.GetService(typeof(IWebHostEnvironment)) as IWebHostEnvironment;
+                    var isDev = env != null && env.IsDevelopment();
+
+                    if (isDev)
+                    {
+                        return StatusCode(500, new { error = "خطا در ذخیره‌سازی جلسه (DB).", dbMessage = dbex.Message, inner, entries = entriesInfo });
+                    }
+
+                    return StatusCode(500, new { error = "خطا در ذخیره‌سازی جلسه (DB)." });
+                }
             }
             catch (Exception ex)
             {
-                // لاگ کامل خطا
-                _logger?.LogError(ex, "Error creating attendance session for grade {Grade} by {User}", grade, User?.Identity?.Name);
-
-                // در حالت توسعه اجازه بدهیم جزئیات را ببینیم، وگرنه پیام عمومی برگردان
-                var isDev = false;
-                try
-                {
-                    // اگر کنترلر شما DI برای IWebHostEnvironment دارد:
-                    var env = HttpContext.RequestServices.GetService(typeof(IWebHostEnvironment)) as IWebHostEnvironment;
-                    isDev = env != null && env.IsDevelopment();
-                }
-                catch { /* ignore */ }
-
-                if (isDev)
-                {
-                    return StatusCode(500, new { error = "خطا در ایجاد جلسه حضور و غیاب.", detail = ex.ToString() });
-                }
-
+                _logger?.LogError(ex, "CreateSessionAjax: unexpected error while creating session for grade {Grade}", grade);
+                var env = HttpContext.RequestServices.GetService(typeof(IWebHostEnvironment)) as IWebHostEnvironment;
+                var isDev = env != null && env.IsDevelopment();
+                if (isDev) return StatusCode(500, new { error = "خطا در ایجاد جلسه حضور و غیاب.", detail = ex.ToString() });
                 return StatusCode(500, new { error = "خطا در ایجاد جلسه حضور و غیاب." });
             }
         }
-
 
         // ---------- SessionDetails (GET) - ناظر بعد از ایجاد جلسه ----------
         [HttpGet]
