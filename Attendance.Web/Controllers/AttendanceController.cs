@@ -303,45 +303,120 @@ namespace Attendance.Web.Controllers
         //}
 
         // ---------- SessionDetails (GET) - ناظر بعد از ایجاد جلسه ----------
-// AttendanceController.cs (یا فایل مربوط)
-        [HttpGet]
+        // AttendanceController.cs (یا فایل مربوط)
+        // مسیردهی صریح برای اطمینان از تطابق URL
+        // using های لازم در بالای فایل controller:
+        // using Microsoft.EntityFrameworkCore;
+
+        [HttpGet] // conventional route: /Attendance/SessionDetails/{id}
         public async Task<IActionResult> SessionDetails(long id)
         {
-            // خواندن جلسه به همراه رکوردها و دانش‌آموزان مرتبط
+            var session = await _db.AttendanceSessions
+                .Include(s => s.Records)
+                    .ThenInclude(r => r.Student)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (session == null)
+                return NotFound();
+
+            // ⚠ این خط باعث می‌شد View لود نشود:
+            // return Content($"SessionDetailsDiagnostic2: found session id={session.Id}, title={session.Title}");
+
+            // ✔ نسخه صحیح:
+            return View(session);
+        }
+
+        //public async Task<IActionResult> SessionDetails(long id)
+        //{
+        //    _logger?.LogInformation("SessionDetails called with id={Id}", id);
+
+        //    var session = await _db.AttendanceSessions
+        //                           .AsNoTracking()
+        //                           .Include(s => s.Records)
+        //                              .ThenInclude(r => r.Student)
+        //                           .FirstOrDefaultAsync(s => s.Id == id);
+
+        //    if (session == null)
+        //    {
+        //        _logger?.LogWarning("SessionDetails: session not found id={Id}", id);
+        //        return NotFound(); // 404 — این حالت قبلاً داشتی
+        //    }
+
+        //    // اگر می‌خواهی از ViewModel استفاده کنی میتوانی اینجا مپ کنی.
+        //    // برای سرعت و سادگی ما مستقیم مدل را پاس می‌کنیم:
+        //    return View(session);
+        //}
+
+
+        // Diagnostic test - paste into any controller class (e.g. HomeController) and rebuild
+        [HttpGet("/Attendance/SessionDetails/diagnostic/{id:long}")]
+        public IActionResult SessionDetailsDiagnostic(long id)
+        {
+            // quick check that routing and controller pipeline work for this URL
+            return Content($"DIAGNOSTIC OK - reached SessionDetailsDiagnostic with id={id}");
+        }
+
+        // داخل کلاس AttendanceController (همان‌جایی که بقیه اکشن‌ها قرار دارند)
+        [HttpGet("/Attendance/SessionDetails/{id:long}")]
+        public async Task<IActionResult> SessionDetailsDiagnostic2(long id)
+        {
+            _logger?.LogInformation("SessionDetailsDiagnostic2 hit with id={Id}", id);
+            // تلاش برای پیدا کردن سشن (برای تشخیص اینکه DB و mapping درست است یا خیر)
             var session = await _db.AttendanceSessions
                                    .Include(s => s.Records)
-                                      .ThenInclude(r => r.Student)
+                                   .ThenInclude(r => r.Student)
                                    .AsNoTracking()
                                    .FirstOrDefaultAsync(s => s.Id == id);
 
             if (session == null)
             {
-                TempData["ErrorMessage"] = "جلسه مورد نظر یافت نشد.";
-                return RedirectToAction(nameof(Index));
+                // برای تست موقت، اگر پیدا نشد فقط نشان ده که مچ شده اما داده نیست
+                return Content($"SessionDetailsDiagnostic2: route matched but session not found for id={id}");
             }
 
-            // نگاشت به ViewModel ساده
-            var vm = new SessionDetailsViewModel
-            {
-                Id = session.Id,
-                Title = session.Title,
-                Date = session.Date,
-                StartAt = session.StartAt,
-                EndAt = session.EndAt,
-                Location = session.Location,
-                CreatedAt = session.CreatedAt,
-                Records = session.Records.Select(r => new AttendanceRecordItem
-                {
-                    Id = r.Id,
-                    StudentId = r.StudentId,
-                    StudentName = r.Student != null ? $"{r.Student.FirstName} {r.Student.LastName}" : "—",
-                    StudentPhoto = r.Student?.PhotoPath ?? "/uploads/students/default.png",
-                    IsPresent = r.IsPresent,
-                    Note = r.Note
-                }).OrderBy(x => x.StudentName).ToList()
-            };
-
-            return View(vm); // Views/Attendance/SessionDetails.cshtml
+            // اگر پیدا شد، فقط یک متن ساده برگردان تا ببینی اطلاعات دریافت شده
+            return Content($"SessionDetailsDiagnostic2: found session id={session.Id}, title={session.Title ?? "(no title)"}");
         }
+
+
+        //[HttpGet]
+        //public async Task<IActionResult> SessionDetails(long id)
+        //{
+        //    // خواندن جلسه به همراه رکوردها و دانش‌آموزان مرتبط
+        //    var session = await _db.AttendanceSessions
+        //                           .Include(s => s.Records)
+        //                              .ThenInclude(r => r.Student)
+        //                           .AsNoTracking()
+        //                           .FirstOrDefaultAsync(s => s.Id == id);
+
+        //    if (session == null)
+        //    {
+        //        TempData["ErrorMessage"] = "جلسه مورد نظر یافت نشد.";
+        //        return RedirectToAction(nameof(Index));
+        //    }
+
+        //    // نگاشت به ViewModel ساده
+        //    var vm = new SessionDetailsViewModel
+        //    {
+        //        Id = session.Id,
+        //        Title = session.Title,
+        //        Date = session.Date,
+        //        StartAt = session.StartAt,
+        //        EndAt = session.EndAt,
+        //        Location = session.Location,
+        //        CreatedAt = session.CreatedAt,
+        //        Records = session.Records.Select(r => new AttendanceRecordItem
+        //        {
+        //            Id = r.Id,
+        //            StudentId = r.StudentId,
+        //            StudentName = r.Student != null ? $"{r.Student.FirstName} {r.Student.LastName}" : "—",
+        //            StudentPhoto = r.Student?.PhotoPath ?? "/uploads/students/default.png",
+        //            IsPresent = r.IsPresent,
+        //            Note = r.Note
+        //        }).OrderBy(x => x.StudentName).ToList()
+        //    };
+
+        //    return View(vm); // Views/Attendance/SessionDetails.cshtml
+        //}
     }
 }
