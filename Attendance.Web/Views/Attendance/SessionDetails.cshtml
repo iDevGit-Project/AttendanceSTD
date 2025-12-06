@@ -1,4 +1,191 @@
-﻿@model Attendance.Data.Entities.AttendanceSession
+﻿@using Attendance.Data.Entities
+@using Attendance.Web.Helpers
+@model Attendance.Data.Entities.AttendanceSession
+
+@{
+    ViewData["Title"] = "جزئیات جلسه - " + (Model?.Title ?? "");
+    // helper های کوچک برای نمایش تاریخ/زمان
+    Func<DateTime?, string> toShamsi = dt => dt.HasValue ? (PersianDateConverter.ToShamsiString(dt.Value) ?? dt.Value.ToString("yyyy/MM/dd")) : "-";
+    Func<DateTime?, string> toTime = dt => dt.HasValue ? dt.Value.ToString("HH:mm") : "-";
+
+    // helper برای تولید badge وضعیت (HTML string)
+    Func<AttendanceRecord, string> statusBadgeHtml = r =>
+    {
+        // بررسی وجود propertyهای احتمالی وضعیت (نام‌های رایج)
+        var t = r.GetType();
+        var prop = t.GetProperty("AttendanceStatus") ?? t.GetProperty("Status");
+        if (prop != null)
+        {
+            try
+            {
+                var val = prop.GetValue(r);
+                var code = Convert.ToInt32(val);
+                switch (code)
+                {
+                    case 1: // حاضر
+                        return "<span class=\"inline-block px-2 py-1 rounded text-sm font-semibold text-teal-800 bg-teal-100\">حاضر</span>";
+                    case 2: // غیبت موجه
+                        return "<span class=\"inline-block px-2 py-1 rounded text-sm font-semibold text-amber-800 bg-amber-100\">غیبت موجه</span>";
+                    case 3: // تأخیر
+                        return "<span class=\"inline-block px-2 py-1 rounded text-sm font-semibold text-yellow-800 bg-yellow-100\">تاخیر</span>";
+                    default: // 0 یا هر چیز دیگر -> غایب
+                        return "<span class=\"inline-block px-2 py-1 rounded text-sm font-semibold text-rose-800 bg-rose-100\">غایب</span>";
+                }
+            }
+            catch
+            {
+                // در صورت خطا fallback به IsPresent
+            }
+        }
+
+        // fallback: فقط IsPresent موجود است
+        if (r.IsPresent)
+            return "<span class=\"inline-block px-2 py-1 rounded text-sm font-semibold text-teal-800 bg-teal-100\">حاضر</span>";
+        else
+            return "<span class=\"inline-block px-2 py-1 rounded text-sm font-semibold text-rose-800 bg-rose-100\">غایب</span>";
+    };
+}
+
+<div class="bg-white rounded-lg border p-6 space-y-4">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">@(@Model?.Title ?? "بدون عنوان")</h1>
+            <p class="text-sm text-slate-500">شناسه جلسه: <span class="font-mono">@Model?.Id</span></p>
+            <div class="text-sm text-slate-600 mt-2">
+                <div>تاریخ (شمسی): <span class="font-bold text-slate-800">@toShamsi(Model?.Date)</span></div>
+                <div>شروع: <span class="font-bold">@toTime(Model?.StartAt)</span></div>
+                @if (!string.IsNullOrWhiteSpace(Model?.Location))
+                {
+                    <div>مکان: <span class="font-bold">@Model.Location</span></div>
+                }
+            </div>
+        </div>
+
+        <div class="text-right">
+            <a asp-action="Index" asp-controller="Attendance" class="inline-block px-3 py-2 bg-slate-100 rounded hover:bg-slate-200">بازگشت</a>
+        </div>
+    </div>
+
+    <div>
+        <h2 class="text-lg font-semibold text-slate-700">فهرست دانش‌آموزان ( @(Model?.Records?.Count() ?? 0) )</h2>
+
+        <div class="mt-3 overflow-x-auto">
+            <form id="attendance-form">
+                @* hidden session id for post *@
+                <input type="hidden" name="sessionId" value="@Model?.Id" />
+
+                <table class="min-w-full divide-y divide-slate-100">
+                    <thead class="bg-blue-50">
+                        <tr>
+                            <th class="px-3 py-2 text-right text-sm">انتخاب</th>
+                            <th class="px-3 py-2 text-right text-sm">تصویر</th>
+                            <th class="px-3 py-2 text-center text-sm">نام</th>
+                            <th class="px-3 py-2 text-center text-sm">نام خانوادگی</th>
+                            <th class="px-3 py-2 text-center text-sm">کد ملی</th>
+                            <th class="px-3 py-2 text-center text-sm">وضعیت</th>
+                            <th class="px-3 py-2 text-center text-sm">یادداشت</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-slate-100">
+                        @if (Model?.Records == null || !Model.Records.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-slate-500 py-6">هیچ رکوردی وجود ندارد.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var r in Model.Records)
+                            {
+                                var st = r.Student;
+                                var badgeHtml = statusBadgeHtml(r);
+                                // determine if checkbox should be checked (if AttendanceStatus exists and equals 1 OR IsPresent true)
+                                bool checkedBox = false;
+                                var prop = r.GetType().GetProperty("AttendanceStatus") ?? r.GetType().GetProperty("Status");
+                                if (prop != null)
+                                {
+                                    try { checkedBox = Convert.ToInt32(prop.GetValue(r)) == 1; } catch { checkedBox = r.IsPresent; }
+                                }
+                                else
+                                {
+                                    checkedBox = r.IsPresent;
+                                }
+                                <tr id="row-@r.Id" class="hover:bg-slate-50">
+                                    <td class="px-3 py-2 text-right">
+                                        <input type="checkbox" class="present-checkbox" data-record-id="@r.Id" @(checkedBox ? "checked" : "") />
+                                    </td>
+                                    <td class="px-3 py-2 text-right">
+                                        <img src="@(st?.PhotoPath ?? "/uploads/students/default.png")" class="h-10 w-10 object-cover rounded" alt="photo" />
+                                    </td>
+                                    <td class="px-3 py-2 text-center text-sm">@st?.FirstName</td>
+                                    <td class="px-3 py-2 text-center text-sm">@st?.LastName</td>
+                                    <td class="px-3 py-2 text-center text-sm">@st?.NationalCode</td>
+                                    <td class="px-3 py-2 text-center text-sm">
+                                        @Html.Raw(badgeHtml)
+                                    </td>
+                                    <td class="px-3 py-2 text-center text-sm">@r.Note</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+
+                <div class="mt-4 flex items-center justify-end gap-3">
+                    <button type="button" id="saveAttendanceBtn" class="px-4 py-2 bg-green-600 text-white rounded">ذخیره حضور/غیاب</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section SessionDetailsScripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function(){
+            const btn = document.getElementById('saveAttendanceBtn');
+            if (!btn) return;
+
+            btn.addEventListener('click', async function(){
+                const sessionId = document.querySelector('input[name="sessionId"]').value;
+                // collect statuses: note structure: for now we send { id, isPresent } . If later you add AttendanceStatus selection, adapt accordingly.
+                const records = Array.from(document.querySelectorAll('.present-checkbox')).map(cb => {
+                    return { id: parseInt(cb.dataset.recordId,10), isPresent: !!cb.checked };
+                });
+
+                const fd = new FormData();
+                fd.append('sessionId', sessionId);
+                // server expects records[] items (as JSON strings) — binder on server should parse
+                records.forEach(r => {
+                    fd.append('records[]', JSON.stringify(r));
+                });
+
+                // antiforgery token if present in page
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                if (token) fd.append('__RequestVerificationToken', token);
+
+                Swal.fire({title: 'در حال ذخیره...', didOpen: ()=>Swal.showLoading(), allowOutsideClick:false});
+                try {
+                    const resp = await fetch('@Url.Action("SaveAttendance", "Attendance")', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        body: fd
+                    });
+                    const txt = await resp.text();
+                    if (!resp.ok) {
+                        Swal.fire({icon:'error', title:'خطا', text: txt || 'خطا در ذخیره'});
+                        return;
+                    }
+                    Swal.fire({icon:'success', title:'ذخیره شد'}).then(()=> location.reload());
+                } catch(err){
+                    console.error(err);
+                    Swal.fire({icon:'error', title:'خطا', text:'خطا در ارسال درخواست'});
+                }
+            });
+        })();
+    </script>
+}
+
+@* @model Attendance.Data.Entities.AttendanceSession
 @{
     ViewData["Title"] = "جزئیات جلسه - " + (Model.Title ?? "");
 }
@@ -82,8 +269,8 @@
             </table>
         </div>
     </div>
-
-@section Scripts {
+</div>
+@section SessionDetailsScripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         (function(){
@@ -124,4 +311,4 @@
             });
         })();
     </script>
-}
+} *@

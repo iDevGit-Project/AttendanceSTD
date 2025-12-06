@@ -12,8 +12,6 @@ using System.Security.Claims;
 
 namespace Attendance.Web.Controllers
 {
-    // مسیر صریح برای جلوگیری از AmbiguousMatchException و مشخص کردن مسیرها
-    [Route("Attendance/[action]")]
     public class AttendanceController : Controller
     {
         private readonly ApplicationDbContext _db;
@@ -44,7 +42,6 @@ namespace Attendance.Web.Controllers
         }
 
         // ---------- GetStudentsByGrade (AJAX) ----------
-        // برمی‌گرداند JSON شامل لیست دانش‌آموزان برای پایه خواسته‌شده
         [HttpGet]
         public async Task<IActionResult> GetStudentsByGrade(string grade)
         {
@@ -162,8 +159,6 @@ namespace Attendance.Web.Controllers
             catch (DbUpdateException dbex)
             {
                 _logger?.LogError(dbex, "DB error creating attendance session for grade {Grade} by {User}", grade, User?.Identity?.Name);
-
-                // نصیحت: اطلاعات داخلی exception را به‌صورت کامل به کاربر نده — ولی برای دیباگ شما JSON جزئیات را برمی‌گردانید.
                 var inner = dbex.InnerException?.Message ?? dbex.Message;
                 return StatusCode(500, new
                 {
@@ -185,14 +180,10 @@ namespace Attendance.Web.Controllers
             }
         }
 
-        // (اختیاری) نسخه non-ajax اگر خواستی با redirect
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateSession([FromForm] string title, [FromForm] string dateShamsi, [FromForm] string grade, [FromForm] string? location, [FromForm] int[]? studentIds)
         {
-            // این متد مثل CreateSessionAjax عمل می‌کند اما به جای بازگرداندن JSON کاربر را redirect می‌کند.
-            // برای اختصار از همان لاجیک بالا استفاده کن (یا آن را فراخوانی کن).
-            // در اینجا فقط یک نمونه ساده:
             var result = await CreateSessionAjax(title, dateShamsi, grade, location, studentIds) as JsonResult;
             if (result == null) return RedirectToAction("CreateWizard");
             dynamic data = result.Value;
@@ -203,112 +194,7 @@ namespace Attendance.Web.Controllers
             return RedirectToAction("CreateWizard");
         }
 
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> CreateSessionAjax([FromForm] string title, [FromForm] string dateShamsi, [FromForm] string grade, [FromForm] int[]? studentIds)
-        //{
-        //    try
-        //    {
-        //        if (string.IsNullOrWhiteSpace(title)) return BadRequest(new { error = "عنوان جلسه الزامی است." });
-        //        if (string.IsNullOrWhiteSpace(grade)) return BadRequest(new { error = "پایه الزامی است." });
-
-        //        var ids = (studentIds ?? Array.Empty<int>()).Where(i => i > 0).Distinct().ToArray();
-
-        //        _logger?.LogInformation("CreateSessionAjax: user={User}, grade={Grade}, count={Count}, ids={Ids}",
-        //            User?.Identity?.Name ?? "anonymous", grade, ids.Length, string.Join(",", ids));
-
-        //        // verify students exist
-        //        if (ids.Length > 0)
-        //        {
-        //            var existing = await _db.Students.AsNoTracking().Where(s => ids.Contains(s.Id)).Select(s => s.Id).ToListAsync();
-        //            var missing = ids.Except(existing).ToArray();
-        //            if (missing.Any())
-        //            {
-        //                _logger?.LogWarning("CreateSessionAjax: missing student ids: {Missing}", string.Join(",", missing));
-        //                return BadRequest(new { error = "برخی شناسه‌های دانش‌آموز یافت نشدند.", missing });
-        //            }
-        //        }
-
-        //        // convert shamsi
-        //        DateTime sessionUtc = DateTime.UtcNow;
-        //        if (!string.IsNullOrWhiteSpace(dateShamsi))
-        //        {
-        //            var parsed = PersianDateConverter.ParseShamsiToUtc(dateShamsi);
-        //            if (parsed.HasValue) sessionUtc = parsed.Value;
-        //            else _logger?.LogWarning("CreateSessionAjax: could not parse dateShamsi='{DateShamsi}'", dateShamsi);
-        //        }
-
-        //        // fallback values to avoid NOT NULL DB errors
-        //        var creator = User?.Identity?.Name ?? "system";
-        //        var session = new AttendanceSession
-        //        {
-        //            Title = title.Trim(),
-        //            SessionDate = sessionUtc,
-        //            Grade = grade,
-        //            CreatedBy = creator,    // <-- set fallback instead of null
-        //            CreatedAt = DateTime.UtcNow,
-        //            Location = "",          // <-- ensure not-null if DB expects it
-        //            Records = new List<AttendanceRecord>()
-        //        };
-
-        //        foreach (var sid in ids)
-        //        {
-        //            session.Records.Add(new AttendanceRecord
-        //            {
-        //                StudentId = sid,
-        //                IsPresent = false,
-        //                CreatedAt = DateTime.UtcNow
-        //            });
-        //        }
-
-        //        _db.AttendanceSessions.Add(session);
-
-        //        try
-        //        {
-        //            await _db.SaveChangesAsync();
-        //            _logger?.LogInformation("CreateSessionAjax: created session {SessionId} by {User}", session.Id, creator);
-        //            return Json(new { id = session.Id, message = "جلسه با موفقیت ایجاد شد." });
-        //        }
-        //        catch (DbUpdateException dbex)
-        //        {
-        //            _logger?.LogError(dbex, "CreateSessionAjax: DbUpdateException creating session. grade={Grade}", grade);
-
-        //            // include inner exception text to help debugging (in dev)
-        //            var inner = dbex.InnerException?.Message;
-        //            var entriesInfo = dbex.Entries?.Select(en => new {
-        //                Type = en.Entity?.GetType().FullName,
-        //                State = en.State.ToString(),
-        //                Values = en.CurrentValues?.Properties.ToDictionary(p => p.Name, p => en.CurrentValues[p.Name])
-        //            }).ToList();
-
-        //            var env = HttpContext.RequestServices.GetService(typeof(IWebHostEnvironment)) as IWebHostEnvironment;
-        //            var isDev = env != null && env.IsDevelopment();
-
-        //            if (isDev)
-        //            {
-        //                return StatusCode(500, new { error = "خطا در ذخیره‌سازی جلسه (DB).", dbMessage = dbex.Message, inner, entries = entriesInfo });
-        //            }
-
-        //            return StatusCode(500, new { error = "خطا در ذخیره‌سازی جلسه (DB)." });
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger?.LogError(ex, "CreateSessionAjax: unexpected error while creating session for grade {Grade}", grade);
-        //        var env = HttpContext.RequestServices.GetService(typeof(IWebHostEnvironment)) as IWebHostEnvironment;
-        //        var isDev = env != null && env.IsDevelopment();
-        //        if (isDev) return StatusCode(500, new { error = "خطا در ایجاد جلسه حضور و غیاب.", detail = ex.ToString() });
-        //        return StatusCode(500, new { error = "خطا در ایجاد جلسه حضور و غیاب." });
-        //    }
-        //}
-
-        // ---------- SessionDetails (GET) - ناظر بعد از ایجاد جلسه ----------
-        // AttendanceController.cs (یا فایل مربوط)
-        // مسیردهی صریح برای اطمینان از تطابق URL
-        // using های لازم در بالای فایل controller:
-        // using Microsoft.EntityFrameworkCore;
-
-        [HttpGet] // conventional route: /Attendance/SessionDetails/{id}
+        [HttpGet]
         public async Task<IActionResult> SessionDetails(long id)
         {
             var session = await _db.AttendanceSessions
@@ -318,105 +204,7 @@ namespace Attendance.Web.Controllers
 
             if (session == null)
                 return NotFound();
-
-            // ⚠ این خط باعث می‌شد View لود نشود:
-            // return Content($"SessionDetailsDiagnostic2: found session id={session.Id}, title={session.Title}");
-
-            // ✔ نسخه صحیح:
             return View(session);
         }
-
-        //public async Task<IActionResult> SessionDetails(long id)
-        //{
-        //    _logger?.LogInformation("SessionDetails called with id={Id}", id);
-
-        //    var session = await _db.AttendanceSessions
-        //                           .AsNoTracking()
-        //                           .Include(s => s.Records)
-        //                              .ThenInclude(r => r.Student)
-        //                           .FirstOrDefaultAsync(s => s.Id == id);
-
-        //    if (session == null)
-        //    {
-        //        _logger?.LogWarning("SessionDetails: session not found id={Id}", id);
-        //        return NotFound(); // 404 — این حالت قبلاً داشتی
-        //    }
-
-        //    // اگر می‌خواهی از ViewModel استفاده کنی میتوانی اینجا مپ کنی.
-        //    // برای سرعت و سادگی ما مستقیم مدل را پاس می‌کنیم:
-        //    return View(session);
-        //}
-
-
-        // Diagnostic test - paste into any controller class (e.g. HomeController) and rebuild
-        [HttpGet("/Attendance/SessionDetails/diagnostic/{id:long}")]
-        public IActionResult SessionDetailsDiagnostic(long id)
-        {
-            // quick check that routing and controller pipeline work for this URL
-            return Content($"DIAGNOSTIC OK - reached SessionDetailsDiagnostic with id={id}");
-        }
-
-        // داخل کلاس AttendanceController (همان‌جایی که بقیه اکشن‌ها قرار دارند)
-        [HttpGet("/Attendance/SessionDetails/{id:long}")]
-        public async Task<IActionResult> SessionDetailsDiagnostic2(long id)
-        {
-            _logger?.LogInformation("SessionDetailsDiagnostic2 hit with id={Id}", id);
-            // تلاش برای پیدا کردن سشن (برای تشخیص اینکه DB و mapping درست است یا خیر)
-            var session = await _db.AttendanceSessions
-                                   .Include(s => s.Records)
-                                   .ThenInclude(r => r.Student)
-                                   .AsNoTracking()
-                                   .FirstOrDefaultAsync(s => s.Id == id);
-
-            if (session == null)
-            {
-                // برای تست موقت، اگر پیدا نشد فقط نشان ده که مچ شده اما داده نیست
-                return Content($"SessionDetailsDiagnostic2: route matched but session not found for id={id}");
-            }
-
-            // اگر پیدا شد، فقط یک متن ساده برگردان تا ببینی اطلاعات دریافت شده
-            return Content($"SessionDetailsDiagnostic2: found session id={session.Id}, title={session.Title ?? "(no title)"}");
-        }
-
-
-        //[HttpGet]
-        //public async Task<IActionResult> SessionDetails(long id)
-        //{
-        //    // خواندن جلسه به همراه رکوردها و دانش‌آموزان مرتبط
-        //    var session = await _db.AttendanceSessions
-        //                           .Include(s => s.Records)
-        //                              .ThenInclude(r => r.Student)
-        //                           .AsNoTracking()
-        //                           .FirstOrDefaultAsync(s => s.Id == id);
-
-        //    if (session == null)
-        //    {
-        //        TempData["ErrorMessage"] = "جلسه مورد نظر یافت نشد.";
-        //        return RedirectToAction(nameof(Index));
-        //    }
-
-        //    // نگاشت به ViewModel ساده
-        //    var vm = new SessionDetailsViewModel
-        //    {
-        //        Id = session.Id,
-        //        Title = session.Title,
-        //        Date = session.Date,
-        //        StartAt = session.StartAt,
-        //        EndAt = session.EndAt,
-        //        Location = session.Location,
-        //        CreatedAt = session.CreatedAt,
-        //        Records = session.Records.Select(r => new AttendanceRecordItem
-        //        {
-        //            Id = r.Id,
-        //            StudentId = r.StudentId,
-        //            StudentName = r.Student != null ? $"{r.Student.FirstName} {r.Student.LastName}" : "—",
-        //            StudentPhoto = r.Student?.PhotoPath ?? "/uploads/students/default.png",
-        //            IsPresent = r.IsPresent,
-        //            Note = r.Note
-        //        }).OrderBy(x => x.StudentName).ToList()
-        //    };
-
-        //    return View(vm); // Views/Attendance/SessionDetails.cshtml
-        //}
     }
 }
