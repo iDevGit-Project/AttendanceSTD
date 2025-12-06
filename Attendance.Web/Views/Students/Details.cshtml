@@ -133,63 +133,63 @@
                 </div>
             </div>
         </div>
-        <div>
-            <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">وضعیت فرم های دانش آموز</h2>
-        </div>
-        <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">
-            <div class="flex-1">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <!-- نمایش داده های لیست های کشویی-->
-                    <p class="text-sm font-bold text-slate-800 mb-3">
-                        فرم تعهدنامه:
-                        <span class="px-3 py-1 font-bold rounded
+    </div>
+    <div>
+        <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">وضعیت فرم های دانش آموز</h2>
+    </div>
+    <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">
+        <div class="flex-1">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <!-- نمایش داده های لیست های کشویی-->
+                <p class="text-sm font-bold text-slate-800 mb-3">
+                    فرم تعهدنامه:
+                    <span class="px-3 py-1 font-bold rounded
                             @(Model.ConsentForm == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
-                            @(Model.ConsentForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
-                        </span>
-                    </p>
-                    <p class="text-sm font-bold text-slate-800 mb-3">
-                        فرم مصاحبه دانش‌آموز:
-                        <span class="px-3 py-1 font-bold rounded
+                        @(Model.ConsentForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                    </span>
+                </p>
+                <p class="text-sm font-bold text-slate-800 mb-3">
+                    فرم مصاحبه دانش‌آموز:
+                    <span class="px-3 py-1 font-bold rounded
                             @(Model.StudentInterviewForm == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
-                            @(Model.StudentInterviewForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
-                        </span>
-                    </p>
-                    <p class="text-sm font-bold text-slate-800 mb-3">
-                        فرم مصاحبه والدین:
-                        <span class="px-3 py-1 font-bold rounded
+                        @(Model.StudentInterviewForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                    </span>
+                </p>
+                <p class="text-sm font-bold text-slate-800 mb-3">
+                    فرم مصاحبه والدین:
+                    <span class="px-3 py-1 font-bold rounded
                             @(Model.ParentInterviewForm == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
-                            @(Model.ParentInterviewForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
-                        </span>
-                    </p>
-                    <p class="text-sm font-bold text-slate-800 mb-3">
-                        آزمون استعدادیابی:
-                        <span class="px-3 py-1 font-bold rounded
+                        @(Model.ParentInterviewForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                    </span>
+                </p>
+                <p class="text-sm font-bold text-slate-800 mb-3">
+                    آزمون استعدادیابی:
+                    <span class="px-3 py-1 font-bold rounded
                             @(Model.TalentTest == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
-                            @(Model.TalentTest == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
-                        </span>
-                    </p>
-                    <p class="text-sm font-bold text-slate-800 mb-3">
-                        فرم روانشناسی:
-                        <span class="px-3 py-1 font-bold rounded
+                        @(Model.TalentTest == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                    </span>
+                </p>
+                <p class="text-sm font-bold text-slate-800 mb-3">
+                    فرم روانشناسی:
+                    <span class="px-3 py-1 font-bold rounded
                             @(Model.PsychologyForm == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
-                            @(Model.PsychologyForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
-                        </span>
-                    </p>
-                    <p class="text-sm font-bold text-slate-800 mb-3">
-                        آزمون هوش:
-                        <span class="px-3 py-1 font-bold rounded
+                        @(Model.PsychologyForm == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                    </span>
+                </p>
+                <p class="text-sm font-bold text-slate-800 mb-3">
+                    آزمون هوش:
+                    <span class="px-3 py-1 font-bold rounded
                             @(Model.IQTest == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
-                            @(Model.IQTest == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
-                        </span>
-                    </p>
-                    <p class="text-sm font-bold text-slate-800 mb-3">
-                        آزمون وارک:
-                        <span class="px-3 py-1 font-bold rounded
+                        @(Model.IQTest == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                    </span>
+                </p>
+                <p class="text-sm font-bold text-slate-800 mb-3">
+                    آزمون وارک:
+                    <span class="px-3 py-1 font-bold rounded
                             @(Model.WarkTest == Student.FormStatus.Complete ? "text-teal-800 bg-teal-100" : "text-rose-800 bg-rose-100")">
-                            @(Model.WarkTest == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
-                        </span>
-                    </p>
-                </div>
+                        @(Model.WarkTest == Student.FormStatus.Complete ? "تکمیل شده" : "تکمیل نشده")
+                    </span>
+                </p>
             </div>
         </div>
     </div>
