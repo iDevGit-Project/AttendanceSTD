@@ -26,9 +26,8 @@ namespace Attendance.Data.Entities
         public TimeOnly? CheckOut { get; set; }
 
         [Display(Name = "وضعیت")]
-        public AttendanceStatus Status { get; set; } = AttendanceStatus.Present;
+        public AttendanceStatus Status { get; set; } = AttendanceStatus.Present; // از enum یکتا استفاده می‌کند
 
-        // → این فیلد جدید برای ثبت مدت زمان تأخیر (دقیقه و ثانیه)
         [Display(Name = "میزان تأخیر")]
         public TimeSpan? LateBy { get; set; }
 
@@ -39,21 +38,5 @@ namespace Attendance.Data.Entities
         [Display(Name = "ثبت‌کننده")]
         public int? TeacherId { get; set; }
         public Teacher? Teacher { get; set; }
-    }
-
-    // وضعیت حضور
-    public enum AttendanceStatus
-    {
-        [Display(Name = "حاضر")]
-        Present = 1,
-
-        [Display(Name = "غایب")]
-        Absent = 2,
-
-        [Display(Name = "با تأخیر")]
-        Late = 3,
-
-        [Display(Name = "موجه")]
-        Excused = 4
     }
 }

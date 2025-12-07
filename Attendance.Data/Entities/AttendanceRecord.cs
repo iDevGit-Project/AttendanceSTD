@@ -8,21 +8,21 @@ using System.Threading.Tasks;
 
 namespace Attendance.Data.Entities
 {
-    public class AttendanceRecord // implements ISoftDelete if you want global filter
+    public class AttendanceRecord
     {
         public int Id { get; set; }
 
-        // <-- مهم: اینجا باید long باشد چون AttendanceSession.Id از نوع long است
+        // SessionId باید نوعش long باشد چون AttendanceSession.Id از نوع long است
         public long SessionId { get; set; }
         public AttendanceSession? Session { get; set; }
 
         public int StudentId { get; set; }
         public Student? Student { get; set; }
 
-        // جدید: وضعیت 4 حالته (enum)
+        // جدید: چهار حالته با enum واحد
         public AttendanceStatus Status { get; set; } = AttendanceStatus.Absent;
 
-        // در صورت نیاز به ثبت تأخیر دقیقه‌ای
+        // اگر می‌خواهی میزان تاخیر را ضبط کنی
         public int? LateMinutes { get; set; }
 
         public string? Note { get; set; }

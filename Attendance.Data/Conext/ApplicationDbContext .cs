@@ -23,21 +23,18 @@ namespace Attendance.Data.Conext
             modelBuilder.Entity<AttendanceSession>(b =>
             {
                 b.HasKey(x => x.Id);
-                // Id is long (bigint) by default if model uses long
                 b.Property(x => x.Title).HasMaxLength(300).IsUnicode();
                 b.Property(x => x.Location).HasMaxLength(200).IsUnicode();
                 b.Property(x => x.Notes).HasMaxLength(2000).IsUnicode();
 
-                // Map Date column explicitly to 'date' if you want (optional)
                 b.Property(x => x.Date).HasColumnType("date");
                 b.Property(x => x.StartAt).HasColumnType("datetime2");
                 b.Property(x => x.EndAt).HasColumnType("datetime2");
 
-                // CreatedAt non-nullable
                 b.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
             });
 
-            // ---------- Student: Unique Index for NationalCode (فقط رکوردهای فعال) ----------
+            // ---------- Student: Unique Index for NationalCode ----------
             modelBuilder.Entity<Student>()
                 .HasIndex(s => s.NationalCode)
                 .IsUnique()
@@ -48,31 +45,45 @@ namespace Attendance.Data.Conext
             {
                 b.HasKey(x => x.Id);
 
-                // IMPORTANT: Ensure AttendanceRecord.SessionId type matches AttendanceSession.Id (long)
-                // If AttendanceRecord.SessionId type is long in the model, this mapping works.
+                // توجه: SessionId باید با نوع PK AttendanceSession.Id سازگار باشد (long)
                 b.HasOne(r => r.Session)
                  .WithMany(s => s.Records)
                  .HasForeignKey(r => r.SessionId)
                  .OnDelete(DeleteBehavior.Cascade);
 
                 b.HasOne(r => r.Student)
-                 .WithMany() // no navigation on Student side
+                 .WithMany()
                  .HasForeignKey(r => r.StudentId)
                  .OnDelete(DeleteBehavior.Restrict);
 
-                // Map Status enum -> tinyint (byte) in DB and set default value properly
-                // Assume you have an enum AttendanceStatus in Attendance.Data.Entities
+                // نگاشت enum -> tinyint (provider) و مقدار پیش‌فرض به صورت enum (CLR)
                 b.Property(r => r.Status)
-                 .HasConversion<byte>()        // enum <-> byte
-                 .HasColumnType("tinyint")     // store as tinyint in SQL Server
-                 .HasDefaultValue((byte)AttendanceStatus.Absent); // cast enum to byte
+                 .HasConversion<byte>()
+                 .HasColumnType("tinyint")
+                 .HasDefaultValue(AttendanceStatus.Absent); // <- مقدار از نوع enum (نه byte)
 
-                // LateMinutes optional
                 b.Property(r => r.LateMinutes).HasColumnType("int").IsRequired(false);
-
                 b.Property(r => r.Note).HasMaxLength(1000).IsUnicode().IsRequired(false);
-
                 b.Property(r => r.CreatedAt).HasColumnType("datetime2").IsRequired();
+            });
+
+            // ---------- Student mapping (PaymentStatus fix here) ----------
+            modelBuilder.Entity<Student>(entity =>
+            {
+                entity.Property(e => e.BirthDate)
+                      .HasColumnType("datetime2");
+
+                entity.Property(e => e.EntryDate)
+                      .HasColumnType("datetime2");
+
+                // نگاشت enum PaymentStatus -> tinyint
+                entity.Property(e => e.PaymentStatus)
+                      .HasConversion<byte>()
+                      .HasColumnType("tinyint")
+                      .HasDefaultValue(PaymentStatus.Unpaid); // <-- مهم: مقدار enum (CLR) نه byte
+
+                entity.Property(e => e.WorkgroupName)
+                      .HasMaxLength(200);
             });
 
             // --------- Global Query Filter for Soft Delete ----------
@@ -95,24 +106,6 @@ namespace Attendance.Data.Conext
                 .Property(s => s.RowVersion)
                 .IsRowVersion()
                 .IsConcurrencyToken();
-
-            // ---------- Map Student date columns and PaymentStatus ----------
-            modelBuilder.Entity<Student>(entity =>
-            {
-                entity.Property(e => e.BirthDate)
-                      .HasColumnType("datetime2");
-
-                entity.Property(e => e.EntryDate)
-                      .HasColumnType("datetime2");
-
-                entity.Property(e => e.PaymentStatus)
-                      .HasConversion<byte>()
-                      .HasColumnType("tinyint")
-                      .HasDefaultValue((byte)PaymentStatus.Unpaid);
-
-                entity.Property(e => e.WorkgroupName)
-                      .HasMaxLength(200);
-            });
         }
     }
 }
