@@ -1,4 +1,5 @@
-﻿@using Attendance.Web.Helpers
+﻿@using Attendance.Data.Entities
+@using Attendance.Web.Helpers
 @model Attendance.Data.Entities.AttendanceSession
 @{
     ViewData["Title"] = "جزئیات جلسه - " + (Model.Title ?? "");
@@ -85,49 +86,51 @@
                         }
                         else
                         {
-                            foreach (var r in Model.Records)
-                            {
-                                var st = r.Student;
-                                // مقدار وضعیت فعلی به صورت عددی (مطابق enum شما) - فرض enum: 1=Present,2=Absent,3=Late,4=Excused
-                                var curStatus = (int)r.Status;
-                                <tr id="row-@r.Id" class="hover:bg-slate-50">
-                                    <td class="px-3 py-2 text-right">
-                                        <img src="@(st?.PhotoPath ?? "/uploads/students/default.png")" class="h-10 w-10 object-cover rounded" alt="photo" />
-                                    </td>
-                                    <td class="px-3 py-2 text-center text-sm">@st?.FirstName</td>
-                                    <td class="px-3 py-2 text-center text-sm">@st?.LastName</td>
-                                    <td class="px-3 py-2 text-center text-sm">@st?.NationalCode</td>
+                        @foreach (var r in Model.Records)
+                        {
+                            var st = r.Student;
+                            <tr id="row-@r.Id" class="hover:bg-slate-50" data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">
+                                <td class="px-3 py-2 text-right">
+                                    <!-- checkbox (useful for legacy boolean approach) -->
+                                    <input type="checkbox"
+                                           class="present-checkbox"
+                                           data-student-id="@(st?.Id ?? 0)"
+                                           data-record-id="@r.Id"
+                                           @(r.Status == AttendanceStatus.Present ? "checked" : "") />
+                                </td>
 
-                                    <td class="px-3 py-2 text-center text-sm">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <label class="inline-flex items-center gap-2">
-                                                <input type="radio" name="status_@r.Id" value="1" class="status-radio" data-record-id="@r.Id" @(curStatus == 1 ? "checked" : "") />
-                                                <span class="text-xs">حاضر</span>
-                                            </label>
-                                            <label class="inline-flex items-center gap-2">
-                                                <input type="radio" name="status_@r.Id" value="2" class="status-radio" data-record-id="@r.Id" @(curStatus == 2 ? "checked" : "") />
-                                                <span class="text-xs">غایب</span>
-                                            </label>
-                                            <label class="inline-flex items-center gap-2">
-                                                <input type="radio" name="status_@r.Id" value="4" class="status-radio" data-record-id="@r.Id" @(curStatus == 4 ? "checked" : "") />
-                                                <span class="text-xs">موجه</span>
-                                            </label>
-                                            <label class="inline-flex items-center gap-2">
-                                                <input type="radio" name="status_@r.Id" value="3" class="status-radio" data-record-id="@r.Id" @(curStatus == 3 ? "checked" : "") />
-                                                <span class="text-xs">تأخیر</span>
-                                            </label>
-                                        </div>
-                                    </td>
+                                <td class="px-3 py-2 text-center text-sm">@st?.FirstName</td>
+                                <td class="px-3 py-2 text-center text-sm">@st?.LastName</td>
+                                <td class="px-3 py-2 text-center text-sm">@st?.NationalCode</td>
 
-                                    <td class="px-3 py-2 text-center text-sm">
-                                        <input type="text" name="note_@r.Id" class="w-full text-sm border rounded px-2 py-1" value="@(r.Note ?? "")" placeholder="یادداشت..." />
-                                    </td>
+                                <td class="px-3 py-2 text-center text-sm">
+                                    <!-- status select (4-state) -->
+                                    <select class="status-select px-2 py-1 border rounded text-sm" data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">
+                                        <option value="1" @(r.Status == AttendanceStatus.Present ? "selected" : "")>حاضر</option>
+                                        <option value="2" @(r.Status == AttendanceStatus.Absent ? "selected" : "")>غایب</option>
+                                        <option value="4" @(r.Status == AttendanceStatus.Excused ? "selected" : "")>غیبت موجه</option>
+                                        <option value="3" @(r.Status == AttendanceStatus.Late ? "selected" : "")>تأخیر</option>
+                                    </select>
+                                </td>
 
-                                    <td class="px-3 py-2 text-center text-sm">
-                                        <input type="number" min="0" name="late_@r.Id" class="w-20 text-sm border rounded px-2 py-1" value="@(r.LateMinutes?.ToString() ?? "")" placeholder="دقیقه" />
-                                    </td>
-                                </tr>
-                            }
+                                <td class="px-3 py-2 text-center text-sm">
+                                    <div class="flex flex-col gap-2">
+                                        <input type="number" min="0" step="1"
+                                               class="late-minutes px-2 py-1 border rounded text-sm"
+                                               placeholder="دقیقه"
+                                               value="@(r.LateMinutes.HasValue ? r.LateMinutes.Value.ToString() : "")"
+                                               data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)" />
+
+                                        <textarea class="attendance-note px-2 py-1 border rounded text-sm" rows="1"
+                                                  data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">@(r.Note ?? "")</textarea>
+                                    </div>
+
+                                    @* hidden fallback: studentId (برای collectRecords و سرور) *@
+                                    <input type="hidden" name="studentId" value="@(st?.Id ?? 0)" />
+                                </td>
+                            </tr>
+                        }
+
                         }
                     </tbody>
                 </table>
@@ -145,266 +148,180 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         (function () {
-            // helper: read token
+            // helper: safe query
+            const $ = (sel, ctx = document) => ctx.querySelector(sel);
+            const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+
+            // button id must match the one in your view
+            const saveBtn = document.getElementById('saveAttendanceBtn');
+            if (!saveBtn) {
+                console.warn('saveAttendanceBtn not found - please ensure button id="saveAttendanceBtn" exists in SessionDetails view.');
+                return;
+            }
+
             function getAntiForgeryToken() {
                 const el = document.querySelector('input[name="__RequestVerificationToken"]');
                 return el ? el.value : null;
             }
 
+            // Build payload from DOM rows.
+            // We support multiple markup patterns:
+            // 1) each row has data-record-id, data-student-id attributes
+            // 2) checkbox inputs with class .present-checkbox and data-record-id/data-student-id
+            // 3) optional per-row select.status-select (values 1..4), input.note-input, input.late-minutes
+        // ---------- DEBUG-FRIENDLY collectRecords replacement ----------
             function collectRecords() {
-                const rows = Array.from(document.querySelectorAll('tr[id^="row-"]'));
-                const arr = [];
-                for (const row of rows) {
-                    const recId = parseInt(row.getAttribute('id').replace('row-', ''), 10);
-                    // status radio
-                    const sel = row.querySelector('input[name="status_' + recId + '"]:checked');
-                    const status = sel ? parseInt(sel.value, 10) : 2; // default Absent
-                    const noteEl = row.querySelector('input[name="note_' + recId + '"]');
-                    const lateEl = row.querySelector('input[name="late_' + recId + '"]');
-                    const note = noteEl ? (noteEl.value || null) : null;
-                    const late = lateEl && lateEl.value ? parseInt(lateEl.value, 10) : null;
-
-                    arr.push({
-                        recordId: recId,
-                        studentId: parseInt(row.dataset ? (row.dataset.studentId || 0) : 0, 10) || undefined,
-                        status: status,
-                        note: note,
-                        lateMinutes: late
-                    });
-                }
-                return arr;
-            }
-
-            const btn = document.getElementById('saveAttendanceBtn');
-            btn.addEventListener('click', async function () {
-                const sessionIdInput = document.querySelector('input[name="sessionId"]');
-                const sessionId = sessionIdInput ? sessionIdInput.value : null;
-                if (!sessionId) {
-                    return Swal.fire({ icon: 'error', title: 'خطا', text: 'شناسه جلسه ناموجود است.' });
-                }
-
-                const payload = collectRecords();
-
-                if (!payload.length) {
-                    return Swal.fire({ icon: 'warning', title: 'هشدار', text: 'رکوردی برای ذخیره وجود ندارد.' });
-                }
-
-                const token = getAntiForgeryToken();
-                if (!token) {
-                    console.error('AntiForgery token missing in DOM.');
-                    return Swal.fire({ icon: 'error', title: 'خطا', text: 'توکن امنیتی پیدا نشد. صفحه را رفرش کنید.' });
-                }
-
-                // build formdata: send a single JSON array in 'records' field (سرور ما هر دو حالت را پشتیبانی می‌کند)
-                const fd = new FormData();
-                fd.append('sessionId', sessionId);
-                fd.append('__RequestVerificationToken', token);
-                fd.append('records', JSON.stringify(payload));
-
-                Swal.fire({ title: 'در حال ذخیره...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+                console.group('collectRecords-debug');
                 try {
-                    const resp = await fetch('@Url.Action("SaveAttendance", "Attendance")', {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        body: fd
+                    // روش 1: ردیف‌هایی که id یا data-record-id دارند
+                    let rows = Array.from(document.querySelectorAll('tr[id^="row-"], tr[data-record-id], div.row-student, div.student-row'));
+
+                    console.log('initial rows count (by tr/div selectors):', rows.length);
+
+                    // روش 2: اگر checkbox هایی با کلاس present-checkbox وجود داشته باشند، از والدشان استفاده کن
+                    if (rows.length === 0) {
+                        const cbs = Array.from(document.querySelectorAll('.present-checkbox, input[type="checkbox"].present-checkbox'));
+                        console.log('.present-checkbox found:', cbs.length);
+                        rows = cbs.map(cb => cb.closest('tr') || cb.closest('div') || cb.parentElement).filter(Boolean);
+                        console.log('rows derived from checkboxes:', rows.length);
+                    }
+
+                    // روش 3: fallback به همه tr داخل tbody
+                    if (rows.length === 0) {
+                        rows = Array.from(document.querySelectorAll('tbody tr'));
+                        console.log('fallback to tbody tr count:', rows.length);
+                    }
+
+                    // روش 4: خشن‌ترین fallback: همه div های داخل container students-list
+                    if (rows.length === 0) {
+                        const container = document.getElementById('students-list') || document.getElementById('records-container');
+                        if (container) {
+                            rows = Array.from(container.querySelectorAll('div'));
+                            console.log('fallback to container divs count:', rows.length);
+                        }
+                    }
+
+                    // اکنون هر row را تبدیل به DTO می‌کنیم
+                    const records = [];
+
+                    rows.forEach((row, idx) => {
+                        // لاگ row برای دیدن ساختار
+                        console.debug('row['+idx+'] element:', row);
+
+                        // تلاش برای خواندن studentId / recordId:
+                        let studentId = null;
+                        let recordId = null;
+
+                        // از data-attrs شروع کن
+                        if (row.dataset) {
+                            if (row.dataset.studentId) studentId = parseInt(row.dataset.studentId, 10);
+                            if (row.dataset.recordId) recordId = parseInt(row.dataset.recordId, 10);
+                        }
+
+                        // بررسی وجود hidden inputs داخل ردیف
+                        if ((!studentId || isNaN(studentId)) && row.querySelector) {
+                            const hid = row.querySelector('input[type="hidden"][name="studentId"], input.student-id[type="hidden"]');
+                            if (hid && hid.value) studentId = parseInt(hid.value, 10);
+                        }
+
+                        // بررسی checkbox داخل ردیف (مهم)
+                        const cb = row.querySelector && (row.querySelector('.present-checkbox') || row.querySelector('input[type="checkbox"].present-checkbox'));
+                        if (cb) {
+                            // اگر checkbox دیتاست studentId داشته باشه از اون استفاده کن
+                            if (!studentId && (cb.dataset && cb.dataset.studentId)) studentId = parseInt(cb.dataset.studentId, 10);
+                            if (!recordId && (cb.dataset && cb.dataset.recordId)) recordId = parseInt(cb.dataset.recordId, 10);
+                        }
+
+                        // اگر هنوز studentId نداشتیم سعی کن از سلول‌ها بگیری (مثلاً ستون اول)
+                        if ((!studentId || isNaN(studentId)) && row.querySelector) {
+                            const maybeSid = row.querySelector('[data-student-id]');
+                            if (maybeSid) studentId = parseInt(maybeSid.getAttribute('data-student-id'), 10);
+                        }
+
+                        // اگر studentId معتبر نیست، skip کن و لاگ بزن
+                        if (!studentId || isNaN(studentId)) {
+                            console.warn('Skipping row because studentId not found or invalid. row index:', idx, row);
+                            return;
+                        }
+
+                        // وضعیت: اگر select وضعیت هست از آن بخوان، در غیر اینصورت از checkbox
+                        let status = null;
+                        const statusSelect = row.querySelector && (row.querySelector('.attendance-status, .status-select, select.status-select'));
+                        if (statusSelect && statusSelect.value) {
+                            status = parseInt(statusSelect.value, 10);
+                        } else if (cb) {
+                            status = cb.checked ? 1 : 2; // 1=Present,2=Absent
+                        } else {
+                            status = 2;
+                        }
+
+                        // note و lateMinutes
+                        const noteEl = row.querySelector && (row.querySelector('.attendance-note') || row.querySelector('.note-input') || row.querySelector('textarea'));
+                        const note = noteEl ? (noteEl.value || noteEl.textContent || '').trim() : null;
+
+                        const lateEl = row.querySelector && (row.querySelector('.late-minutes') || row.querySelector('input.late-minutes'));
+                        let lateMinutes = null;
+                        if (lateEl && lateEl.value) {
+                            const v = parseInt(lateEl.value, 10);
+                            if (!isNaN(v)) lateMinutes = v;
+                        }
+
+                        const dto = {
+                            recordId: recordId ? recordId : null,
+                            studentId: studentId,
+                            status: Number.isInteger(status) ? status : 2,
+                            note: note || null,
+                            lateMinutes: lateMinutes
+                        };
+
+                        console.log('Collected DTO:', dto);
+                        records.push(dto);
                     });
 
-                    const bodyText = await resp.text();
-                    let parsed = null;
-                    try { parsed = JSON.parse(bodyText); } catch { /* not json */ }
-
-                    console.log('SaveAttendance response:', resp.status, parsed ?? bodyText);
-
-                    if (!resp.ok) {
-                        // try to get friendly message
-                        const errorMsg = (parsed && (parsed.error || parsed.message)) ? (parsed.error || parsed.message) : (bodyText || `خطا: ${resp.status}`);
-                        Swal.close();
-                        return Swal.fire({ icon: 'error', title: 'خطا در ذخیره‌سازی', text: errorMsg });
-                    }
-
-                    // success
-                    Swal.fire({ icon: 'success', title: 'ذخیره شد', text: parsed && parsed.message ? parsed.message : 'عملیات با موفقیت انجام شد.' })
-                        .then(() => {
-                            // reload to reflect updates (or update UI in-place)
-                            location.reload();
-                        });
-
+                    console.log('Total collected records:', records.length);
+                    console.groupEnd();
+                    return records;
                 } catch (err) {
-                    console.error('SaveAttendance unexpected error', err);
-                    Swal.close();
-                    Swal.fire({ icon: 'error', title: 'خطا', text: 'خطای غیرمنتظره در ذخیره‌سازی' });
+                    console.error('collectRecords exception', err);
+                    console.groupEnd();
+                    return [];
                 }
-            });
-
-            // اضافه: هر ردیف را با data-student-id علامت بزنیم (برای ایمنی)
-            document.addEventListener('DOMContentLoaded', function () {
-                document.querySelectorAll('tr[id^="row-"]').forEach(tr => {
-                    // اگر model رکورد شامل StudentId در ردیف نیست، سعی کن از DOM موجود استفاده کنی؛ در غیر اینصورت null
-                    const rid = parseInt(tr.id.replace('row-', ''), 10);
-                    // پیدا کردن student id از داخلتری (mvc model binding: رکورد Student.Id در حافظه سرور)
-                    const studentCellImg = tr.querySelector('img');
-                    // برای ایمنی اگر attribute وجود ندارد آن را 0 قرار می‌دهیم
-                    if (!tr.dataset || !tr.dataset.studentId) {
-                        // کوشش می‌کنیم attribute اضافه کنیم اگر در مدل سرور موجود باشد:
-                        try {
-                            const sid = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Records.ToDictionary(rr => rr.Id, rr => rr.StudentId)));
-                            // sid یک آبجکت JS است؛ اگر مقدار برای rid هست آن را قرار بده
-                            if (sid && sid[rid]) tr.dataset.studentId = sid[rid];
-                        } catch (e) {
-                            // ignore
-                        }
-                    }
-                });
-            });
-        })();
-    </script>
-}
-
-@* @model Attendance.Data.Entities.AttendanceSession
-@{
-    ViewData["Title"] = "جزئیات جلسه - " + (Model.Title ?? "");
-}
-
-<div class="bg-white rounded-lg border p-6 space-y-4">
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-800">@(!string.IsNullOrEmpty(Model?.Title) ? Model.Title : "بدون عنوان")</h1>
-            <p class="text-sm text-slate-500">شناسه جلسه: <span class="font-mono">@Model?.Id</span></p>
-        </div>
-
-        <div class="text-right">
-            <a asp-action="Index" asp-controller="Attendance" class="inline-block px-3 py-2 bg-slate-100 rounded hover:bg-slate-200">بازگشت</a>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="p-3 bg-slate-50 rounded">
-            <div class="text-sm text-slate-600">تاریخ جلسه</div>
-            <div class="font-bold text-slate-800">
-                @if (Model?.Date.HasValue == true)
-                {
-                    @Model.Date.Value.ToString("yyyy/MM/dd")
-                }
-                else
-                {
-                    <text>-</text>
-                }
-            </div>
-        </div>
-        <div class="p-3 bg-slate-50 rounded">
-            <div class="text-sm text-slate-600">شروع</div>
-            <div class="font-bold">
-                @(Model?.StartAt.HasValue == true ? Model.StartAt.Value.ToString("yyyy/MM/dd HH:mm") : "-")
-            </div>
-        </div>
-        <div class="p-3 bg-slate-50 rounded">
-            <div class="text-sm text-slate-600">مکان</div>
-            <div class="font-bold">@Model?.Location ?? "-"</div>
-        </div>
-    </div>
-
-    <div class="pt-2">
-        <h2 class="text-lg font-semibold text-slate-700">فهرست دانش‌آموزان ( @(Model?.Records?.Count() ?? 0) )</h2>
-
-        <div class="mt-3 overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-100">
-                <thead class="bg-blue-50">
-                    <tr>
-                        <th class="px-3 py-2 text-right text-sm">تصویر</th>
-                        <th class="px-3 py-2 text-center text-sm">نام</th>
-                        <th class="px-3 py-2 text-center text-sm">نام خانوادگی</th>
-                        <th class="px-3 py-2 text-center text-sm">کد ملی</th>
-                        <th class="px-3 py-2 text-center text-sm">وضعیت</th>
-                        <th class="px-3 py-2 text-center text-sm">یادداشت</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-slate-100">
-                    @Html.AntiForgeryToken()
-                    @if (Model?.Records == null || !Model.Records.Any())
-                    {
-                        <tr>
-                            <td colspan="6" class="text-center text-slate-500 py-6">هیچ رکوردی وجود ندارد.</td>
-                        </tr>
-                    }
-                    else
-                    {
-                        foreach (var r in Model.Records)
-                        {
-                            var st = r.Student;
-                            var statusValue = (int)r.Status; // AttendanceStatus assumed present
-                            <tr id="row-@r.Id" class="hover:bg-slate-50">
-                                <td class="px-3 py-2 text-right">
-                                    <img src="@(st?.PhotoPath ?? "/uploads/students/default.png")" class="h-10 w-10 object-cover rounded" alt="photo" />
-                                </td>
-                                <td class="px-3 py-2 text-center text-sm">@st?.FirstName</td>
-                                <td class="px-3 py-2 text-center text-sm">@st?.LastName</td>
-                                <td class="px-3 py-2 text-center text-sm">@st?.NationalCode</td>
-                                <td class="px-3 py-2 text-center text-sm">
-                                    <select class="attendance-status px-2 py-1 border rounded text-sm" data-record-id="@r.Id" data-student-id="@st?.Id">
-                                        <option value="1" selected="@(statusValue==1 ? "selected" : null)">حاضر</option>
-                                        <option value="0" selected="@(statusValue==0 ? "selected" : null)">غایب</option>
-                                        <option value="2" selected="@(statusValue==2 ? "selected" : null)">غیبت موجه</option>
-                                        <option value="3" selected="@(statusValue==3 ? "selected" : null)">تأخیر</option>
-                                    </select>
-                                </td>
-                                <td class="px-3 py-2 text-center text-sm">
-                                    <input type="text" class="attendance-note border px-2 py-1 rounded text-sm" data-record-id="@r.Id" value="@(r.Note ?? "")" />
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <div class="mt-4">
-            <button type="button" id="saveAttendanceBtn" class="px-4 py-2 bg-green-600 text-white rounded">ذخیره حضور/غیاب</button>
-        </div>
-    </div>
-</div>
-
-@section SessionDetailsScripts {
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        (function(){
-            const btn = document.getElementById('saveAttendanceBtn');
-
-            function getAntiForgeryToken() {
-                const el = document.querySelector('input[name="__RequestVerificationToken"]');
-                return el ? el.value : null;
             }
+            // main click handler
+            saveBtn.addEventListener('click', async function (e) {
+                e.preventDefault();
 
-            btn.addEventListener('click', async function(){
-                const sessionId = '@Model.Id';
-
-                const rows = Array.from(document.querySelectorAll('.attendance-status'));
-                const payload = rows.map(sel => {
-                    const recordId = parseInt(sel.dataset.recordId, 10) || null;
-                    const studentId = parseInt(sel.dataset.studentId, 10);
-                    const status = parseInt(sel.value, 10);
-                    const noteEl = document.querySelector('.attendance-note[data-record-id="'+(recordId)+'"]');
-                    const note = noteEl ? noteEl.value : '';
-                    // if recordId is null, server will add a new record (this is compatible with backend logic)
-                    return {
-                        recordId: recordId,
-                        studentId: studentId,
-                        status: status,
-                        note: note
-                    };
-                });
-
-                const fd = new FormData();
-                fd.append('sessionId', sessionId);
-                fd.append('records', JSON.stringify(payload));
-
-                const token = getAntiForgeryToken();
-                if (token) fd.append('__RequestVerificationToken', token);
-                else {
-                    Swal.fire({ icon: 'error', title: 'خطا', text: 'توکن امنیتی پیدا نشد. صفحه را رفرش کنید.' });
+                // collect sessionId from hidden input in view
+                const sessionIdInput = document.querySelector('input[name="sessionId"], input#sessionId');
+                const sessionId = sessionIdInput ? Number(sessionIdInput.value) : null;
+                if (!sessionId) {
+                    Swal.fire({ icon: 'error', title: 'خطا', text: 'شناسه جلسه پیدا نشد.' });
                     return;
                 }
 
-                Swal.fire({title: 'در حال ذخیره...', didOpen: ()=>Swal.showLoading(), allowOutsideClick:false});
+                const records = collectRecords();
+                if (!records.length) {
+                    Swal.fire({ icon: 'warning', title: 'توجه', text: 'هیچ رکوردی برای ارسال پیدا نشد.' });
+                    return;
+                }
+
+                // antiforgery token
+                const token = getAntiForgeryToken();
+                if (!token) {
+                    console.error('AntiForgery token missing in DOM.');
+                    Swal.fire({ icon: 'error', title: 'توکن امنیتی پیدا نشد', text: 'صفحه را رفرش کنید و دوباره تلاش کنید.' });
+                    return;
+                }
+
+                // Prepare FormData exactly as server expects (records[] entries)
+                const fd = new FormData();
+                fd.append('__RequestVerificationToken', token);
+                fd.append('sessionId', String(sessionId));
+                // append each record as JSON string under key records[]
+                records.forEach(r => fd.append('records[]', JSON.stringify(r)));
+
+                Swal.fire({ title: 'در حال ذخیره...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
                 try {
                     const resp = await fetch('@Url.Action("SaveAttendance", "Attendance")', {
                         method: 'POST',
@@ -412,20 +329,30 @@
                         body: fd
                     });
 
-                    const txt = await resp.text();
+                    const text = await resp.text();
+                    let parsed = null;
+                    try { parsed = JSON.parse(text); } catch (e) { /* not JSON */ }
+
+                    console.log('SaveAttendance response:', { status: resp.status, text, parsed });
+
                     if (!resp.ok) {
-                        let message = txt || 'خطا در ذخیره';
-                        try { const j = JSON.parse(txt); if (j && j.error) message = j.error; } catch(e) {}
-                        Swal.fire({icon:'error', title:'خطا', text: message});
-                        return;
+                        const msg = (parsed && (parsed.error || parsed.message)) ? (parsed.error || parsed.message) : (text || `خطا: ${resp.status}`);
+                        Swal.close();
+                        return Swal.fire({ icon: 'error', title: 'خطا در ذخیره‌سازی', text: msg });
                     }
 
-                    Swal.fire({icon:'success', title:'ذخیره شد'}).then(()=> location.reload());
-                } catch(err){
-                    console.error(err);
-                    Swal.fire({icon:'error', title:'خطا', text:'خطا در ارسال درخواست'});
+                    Swal.fire({ icon: 'success', title: 'ذخیره شد', text: (parsed && parsed.message) ? parsed.message : 'اطلاعات ذخیره شد.' })
+                        .then(() => {
+                            // after success: reload to reflect saved statuses (or optionally fetch partial)
+                            window.location.reload();
+                        });
+
+                } catch (err) {
+                    console.error('SaveAttendance fetch error', err);
+                    Swal.close();
+                    Swal.fire({ icon: 'error', title: 'خطا', text: 'خطای ارتباط با سرور. جزئیات در کنسول.' });
                 }
             });
         })();
     </script>
-} *@
+}
