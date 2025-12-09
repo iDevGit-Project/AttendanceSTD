@@ -370,34 +370,93 @@ namespace Attendance.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> SessionDetails(long id)
         {
-            // 1) ابتدا خود جلسه را (بدون احتمال فیلتر/خطا) بخوان
+            _logger?.LogInformation("SessionDetails called (diagnostic) for id={Id} by {User}", id, User?.Identity?.Name);
+
+            // 1) بارگذاری شیء جلسه (بدون Include برای جلوگیری از مشکلات mapping)
             var session = await _db.AttendanceSessions
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (session == null)
+            {
+                _logger?.LogWarning("SessionDetails: session not found id={Id}", id);
                 return NotFound();
+            }
 
-            // 2) سپس به صورت صریح همه رکوردهای جلسه را از جدول AttendanceRecords بخوان
-            //    و navigation Student را نیز include کن تا اطلاعات دانش‌آموز در View موجود باشد.
+            // 2) بارگذاری صریح رکوردها از جدول AttendanceRecords
             var records = await _db.AttendanceRecords
                 .AsNoTracking()
                 .Where(r => r.SessionId == id)
                 .Include(r => r.Student)
-                // اگر می‌خواهی ترتیب مشخصی داشته باشی (مثلاً بر اساس نام خانوادگی):
-                .OrderBy(r => r.Student.LastName)
-                .ThenBy(r => r.Student.FirstName)
+                .OrderBy(r => r.Student != null ? r.Student.LastName : "") // مرتب‌سازی اختیاری
                 .ToListAsync();
 
-            // 3) جایگزینی collection session.Records با لیست خوانده‌شده
-            //    (پیش‌فرض مدل شما ICollection<AttendanceRecord> دارد و setter هم وجود دارد)
-            session.Records = records;
+            _logger?.LogInformation("SessionDetails: loaded {Count} records for session {Id}", records.Count, id);
 
-            // 4) (اختیاری) لاگ برای بررسی تعداد رکوردها در لاگ سرور
-            _logger?.LogInformation("SessionDetails: session {SessionId} loaded with {Count} records", id, records.Count);
+            // 3) مطمئن شو session.Records قابل مقداردهی است (در مدل باید ICollection باشد)
+            session.Records = records;
 
             return View(session);
         }
+
+        //[HttpGet]
+        //public async Task<IActionResult> SessionDetails(long id)
+        //{
+        //    // diagnostic log
+        //    _logger?.LogInformation("SessionDetails diagnostic for id={Id}", id);
+
+        //    var session = await _db.AttendanceSessions
+        //        .AsNoTracking()
+        //        .FirstOrDefaultAsync(s => s.Id == id);
+
+        //    if (session == null) return NotFound();
+
+        //    // load records explicitly (bypass navigation mapping issues)
+        //    var records = await _db.AttendanceRecords
+        //        .Include(r => r.Student)
+        //        .Where(r => r.SessionId == id)
+        //        .AsNoTracking()
+        //        .ToListAsync();
+
+        //    // assign loaded collection to session.Records (if session.Records is ICollection<AttendanceRecord>)
+        //    session.Records = records;
+
+        //    _logger?.LogInformation("SessionDetails diagnostic loaded {Cnt} records for session {Id}", records.Count, id);
+
+        //    return View(session);
+        //}
+
+        //[HttpGet]
+        //public async Task<IActionResult> SessionDetails(long id)
+        //{
+        //    // 1) ابتدا خود جلسه را (بدون احتمال فیلتر/خطا) بخوان
+        //    var session = await _db.AttendanceSessions
+        //        .AsNoTracking()
+        //        .FirstOrDefaultAsync(s => s.Id == id);
+
+        //    if (session == null)
+        //        return NotFound();
+
+        //    // 2) سپس به صورت صریح همه رکوردهای جلسه را از جدول AttendanceRecords بخوان
+        //    //    و navigation Student را نیز include کن تا اطلاعات دانش‌آموز در View موجود باشد.
+        //    var records = await _db.AttendanceRecords
+        //        .AsNoTracking()
+        //        .Where(r => r.SessionId == id)
+        //        .Include(r => r.Student)
+        //        // اگر می‌خواهی ترتیب مشخصی داشته باشی (مثلاً بر اساس نام خانوادگی):
+        //        .OrderBy(r => r.Student.LastName)
+        //        .ThenBy(r => r.Student.FirstName)
+        //        .ToListAsync();
+
+        //    // 3) جایگزینی collection session.Records با لیست خوانده‌شده
+        //    //    (پیش‌فرض مدل شما ICollection<AttendanceRecord> دارد و setter هم وجود دارد)
+        //    session.Records = records;
+
+        //    // 4) (اختیاری) لاگ برای بررسی تعداد رکوردها در لاگ سرور
+        //    _logger?.LogInformation("SessionDetails: session {SessionId} loaded with {Count} records", id, records.Count);
+
+        //    return View(session);
+        //}
 
         // ----------  POST ArchiveSession ----------
         [HttpPost]
