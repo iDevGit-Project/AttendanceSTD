@@ -8,7 +8,7 @@
 <div class="bg-white rounded-lg border p-6 space-y-4">
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-slate-800">@Model?.Title ?? "بدون عنوان"</h1>
+            <h1 class="text-2xl font-bold text-slate-800">@(Model?.Title ?? "بدون عنوان")</h1>
             <p class="text-sm text-slate-500">شناسه جلسه: <span class="font-mono">@Model?.Id</span></p>
         </div>
 
@@ -46,7 +46,7 @@
 
         <div class="p-3 bg-slate-50 rounded">
             <div class="text-sm text-slate-600">مکان</div>
-            <div class="font-bold">@Model?.Location ?? "-"</div>
+            <div class="font-bold">@((Model?.Location) ?? "-")</div>
         </div>
     </div>
 
@@ -87,16 +87,21 @@
                                         <img src="@(st?.PhotoPath ?? "/uploads/students/default.png")" class="h-10 w-10 object-cover rounded" alt="photo" />
                                     </td>
 
-                                    <td class="px-3 py-2 text-center text-sm">@st?.FirstName</td>
-                                    <td class="px-3 py-2 text-center text-sm">@st?.LastName</td>
-                                    <td class="px-3 py-2 text-center text-sm">@st?.NationalCode</td>
+                                    <td class="px-3 py-2 text-center text-sm">@((st?.FirstName) ?? "")</td>
+                                    <td class="px-3 py-2 text-center text-sm">@((st?.LastName) ?? "")</td>
+                                    <td class="px-3 py-2 text-center text-sm">@((st?.NationalCode) ?? "")</td>
 
                                     <td class="px-3 py-2 text-center text-sm">
                                         @{
-                                            var optPresent = r.Status == AttendanceStatus.Present ? " selected" : "";
-                                            var optAbsent = r.Status == AttendanceStatus.Absent ? " selected" : "";
-                                            var optExcused = r.Status == AttendanceStatus.Excused ? " selected" : "";
-                                            var optLate = r.Status == AttendanceStatus.Late ? " selected" : "";
+                                            // امن‌سازی: convert enum to int safely
+                                            var statusInt = 2;
+                                            try { statusInt = (int)r.Status; } catch { statusInt = 2; }
+
+                                            var optPresent = statusInt == 1 ? " selected" : "";
+                                            var optAbsent = statusInt == 2 ? " selected" : "";
+                                            var optExcused = statusInt == 4 ? " selected" : "";
+                                            var optLate = statusInt == 3 ? " selected" : "";
+
                                             var optionsHtml = "<option value=\"1\"" + optPresent + ">حاضر</option>"
                                             + "<option value=\"2\"" + optAbsent + ">غایب</option>"
                                             + "<option value=\"4\"" + optExcused + ">غیبت موجه</option>"
@@ -105,19 +110,18 @@
                                         <select class="status-select px-2 py-1 border rounded text-sm" data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">
                                             @Html.Raw(optionsHtml)
                                         </select>
-
                                     </td>
 
                                     <td class="px-3 py-2 text-center text-sm">
                                         <textarea class="attendance-note px-2 py-1 border rounded text-sm" rows="1"
-                                                  data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">@(r.Note ?? "")</textarea>
+                                          data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">@(r.Note ?? "")</textarea>
                                     </td>
 
                                     <td class="px-3 py-2 text-center text-sm">
                                         <input type="number" min="0" step="1"
                                                class="late-minutes px-2 py-1 border rounded text-sm"
                                                placeholder="دقیقه"
-                                               value="@(r.LateMinutes.HasValue ? r.LateMinutes.Value.ToString() : "")"
+                                               value="@(r.LateMinutes.HasValue? r.LateMinutes.Value.ToString() : "")"
                                                data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)" />
                                     </td>
                                 </tr>

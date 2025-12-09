@@ -399,19 +399,7 @@ namespace Attendance.Web.Controllers
             return View(session);
         }
 
-        //[HttpGet]
-        //public async Task<IActionResult> SessionDetails(long id)
-        //{
-        //    var session = await _db.AttendanceSessions
-        //        .Include(s => s.Records)
-        //            .ThenInclude(r => r.Student)
-        //        .FirstOrDefaultAsync(s => s.Id == id);
-
-        //    if (session == null)
-        //        return NotFound();
-        //    return View(session);
-        //}
-
+        // ----------  POST ArchiveSession ----------
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ArchiveSession([FromForm] long id)
