@@ -64,6 +64,57 @@ namespace Attendance.Web.Controllers
             return Json(students);
         }
 
+        // ---------- AllSessions ----------
+        [HttpGet]
+        public async Task<IActionResult> AllSessions(int page = 1, int pageSize = 20, string? search = null)
+        {
+            if (page < 1) page = 1;
+            var allowed = new[] { 10, 20, 50, 100 };
+            if (!allowed.Contains(pageSize)) pageSize = 20;
+
+            var query = _db.AttendanceSessions.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                query = query.Where(x => (x.Title ?? "").Contains(s) || (x.Location ?? "").Contains(s));
+            }
+
+            var total = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(total / (double)pageSize);
+            if (totalPages == 0) totalPages = 1;
+            if (page > totalPages) page = totalPages;
+
+            var list = await query
+                .OrderByDescending(x => x.Date ?? x.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Include(s => s.Records) // برای شمارش رکوردها
+                .ToListAsync();
+
+            var vm = new SessionsIndexViewModel
+            {
+                Page = page,
+                PageSize = pageSize,
+                Total = total,
+                TotalPages = totalPages,
+                Search = search,
+                Sessions = list.Select(x => new SessionListItemVm
+                {
+                    Id = x.Id,
+                    Title = x.Title,
+                    Date = x.Date,
+                    DateShamsi = x.Date.HasValue ? PersianDateConverter.ToShamsiString(x.Date.Value) : null,
+                    DeletedAt = x.DeletedAt,
+                    DeletedAtShamsi = x.DeletedAt.HasValue ? PersianDateConverter.ToShamsiString(x.DeletedAt.Value) : null,
+                    Location = x.Location,
+                    RecordsCount = x.Records?.Count ?? 0
+                }).ToList()
+            };
+
+            return View(vm); // Views/Attendance/AllSessions.cshtml
+        }
+
         // ---------------- CreateSessionAjax ----------------
         [HttpPost]
         [ValidateAntiForgeryToken]

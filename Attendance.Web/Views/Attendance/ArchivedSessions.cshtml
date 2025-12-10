@@ -1,17 +1,50 @@
 ﻿@model Attendance.Data.VModels.ArchivedSess.ArchivedSessionsViewModel
 @using Attendance.Data.Entities
+@using System.Text.Encodings.Web
+@using System.Net
 @{
     ViewData["Title"] = "جلسات بایگانی‌شده";
+    // helper for encoding
+    Func<string?, string> enc = s => string.IsNullOrEmpty(s) ? "-" : HtmlEncoder.Default.Encode(s);
+    // helper to convert UTC -> Iran local time string (safely tries Windows/Linux tz ids)
+    Func<DateTime?, string> toIranLocalString = dt =>
+    {
+        if (!dt.HasValue) return "-";
+        try
+        {
+            var utc = DateTime.SpecifyKind(dt.Value, DateTimeKind.Utc);
+            TimeZoneInfo tz = null;
+            try { tz = TimeZoneInfo.FindSystemTimeZoneById("Iran Standard Time"); } catch { /* ignore */ }
+            if (tz == null)
+            {
+                try { tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Tehran"); } catch { /* ignore */ }
+            }
+            if (tz != null)
+            {
+                var local = TimeZoneInfo.ConvertTimeFromUtc(utc, tz);
+                return local.ToString("yyyy-MM-dd HH:mm");
+            }
+            // fallback: show utc as-is (but formatted)
+            return utc.ToString("yyyy-MM-dd HH:mm") + " (UTC)";
+        }
+        catch
+        {
+            try { return dt.Value.ToString("yyyy-MM-dd HH:mm"); } catch { return "-"; }
+        }
+    };
 }
-
 <div class="bg-white rounded-lg p-6">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-lg font-semibold">جلسات بایگانی‌شده</h1>
-        <a asp-action="Index" asp-controller="Attendance" class="px-3 py-2 bg-slate-100 rounded">بازگشت</a>
+        <a asp-action="Index" asp-controller="Home" class="px-3 py-2 bg-slate-100 rounded">بازگشت</a>
     </div>
 
     <form method="get" class="mb-4 flex gap-2">
-        <input type="text" name="search" value="@Model.Search" placeholder="جستجو در عنوان یا مکان" class="px-3 py-2 border rounded w-72" />
+        <input type="text"
+               name="search"
+               value="@(WebUtility.HtmlDecode(Model?.Search ?? ""))"
+               placeholder="جستجو در عنوان یا مکان"
+               class="px-3 py-2 border rounded w-72" />
         <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded">جستجو</button>
     </form>
 
@@ -19,16 +52,16 @@
         <table class="min-w-full divide-y divide-slate-100">
             <thead class="bg-blue-50">
                 <tr>
-                    <th class="px-3 py-2 text-right">شناسه</th>
-                    <th class="px-3 py-2 text-right">عنوان</th>
-                    <th class="px-3 py-2 text-right">تاریخ</th>
-                    <th class="px-3 py-2 text-right">مکان</th>
-                    <th class="px-3 py-2 text-right">بایگانی‌شده در</th>
+                    <th class="px-3 py-2 text-center">شناسه</th>
+                    <th class="px-3 py-2 text-center">عنوان</th>
+                    <th class="px-3 py-2 text-center">تاریخ</th>
+                    <th class="px-3 py-2 text-center">مکان</th>
+                    <th class="px-3 py-2 text-center">بایگانی شده</th>
                     <th class="px-3 py-2 text-center">عملیات</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-slate-100">
-                @if (Model.Sessions == null || !Model.Sessions.Any())
+                @if (Model?.Sessions == null || !Model.Sessions.Any())
                 {
                     <tr><td colspan="6" class="text-center py-6 text-slate-500">هیچ جلسه‌ای یافت نشد.</td></tr>
                 }
@@ -38,10 +71,26 @@
                     {
                         <tr>
                             <td class="px-3 py-2 text-right">@s.Id</td>
-                            <td class="px-3 py-2 text-right">@Html.Encode(s.Title)</td>
+                            <td class="px-3 py-2 text-right">@s.Title</td>
                             <td class="px-3 py-2 text-right">@(s.Date.HasValue? s.Date.Value.ToString("yyyy-MM-dd") : "-")</td>
-                            <td class="px-3 py-2 text-right">@Html.Encode(s.Location ?? "-")</td>
-                            <td class="px-3 py-2 text-right">@(s.DeletedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                            <td class="px-3 py-2 text-right">@((s.Location ?? "-"))</td>
+                            @functions {
+                                private string FormatIranTime(DateTime? utc)
+                                {
+                                    if (!utc.HasValue) return "-";
+                                    try
+                                    {
+                                        // "Iran Standard Time" در ویندوز؛ در لینوکس ممکن است نام متفاوت باشد ("Asia/Tehran")
+                                        TimeZoneInfo tz;
+                                        try { tz = TimeZoneInfo.FindSystemTimeZoneById("Iran Standard Time"); }
+                                        catch { tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Tehran"); }
+                                        var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc.Value, DateTimeKind.Utc), tz);
+                                        return local.ToString("yyyy-MM-dd HH:mm");
+                                    }
+                                    catch { return utc.Value.ToString("yyyy-MM-dd HH:mm"); }
+                                }
+                            }
+                            <td class="px-3 py-2 text-right">@FormatIranTime(s.DeletedAt)</td>
                             <td class="px-3 py-2 text-center">
                                 <a asp-action="SessionDetails" asp-route-id="@s.Id" class="px-3 py-1 bg-slate-100 rounded">مشاهده</a>
                                 <button type="button" data-id="@s.Id" class="unarchive-btn px-3 py-1 bg-emerald-600 text-white rounded ml-2">بازگردانی</button>
@@ -49,7 +98,6 @@
                         </tr>
                     }
                 }
-            
             </tbody>
         </table>
     </div>
@@ -59,7 +107,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         (function(){
-            // اجرا پس از بارگذاری DOM
             document.addEventListener('DOMContentLoaded', function () {
                 function getToken(){ const el=document.querySelector('input[name="__RequestVerificationToken"]'); return el ? el.value : null; }
                 async function post(url, data){

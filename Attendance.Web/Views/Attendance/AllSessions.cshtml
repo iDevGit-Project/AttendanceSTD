@@ -1,0 +1,225 @@
+﻿@model Attendance.Data.VModels.ArchivedSess.SessionsIndexViewModel
+@using System.Net
+@using Attendance.Web.Helpers
+@{
+    ViewData["Title"] = "تمام جلسات";
+}
+
+<div class="bg-white rounded-lg p-6">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-lg font-semibold">تمام جلسات</h1>
+            <div class="text-sm text-slate-500">نمایش جلسات ذخیره‌شده در سیستم</div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <a asp-action="Index" asp-controller="Attendance" class="px-3 py-2 bg-slate-100 rounded hover:bg-slate-200">پیشخوان جلسات</a>
+            <a asp-action="CreateWizard" asp-controller="Attendance" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">ایجاد جلسه جدید</a>
+        </div>
+    </div>
+
+    <!-- جستجو و pageSize مشابه Index دانش‌آموزان -->
+    <form method="get" class="mb-4 flex gap-2 items-center">
+        <input type="hidden" name="pageSize" value="@Model.PageSize" />
+        <input
+            name="search"
+            value="@(WebUtility.HtmlDecode(Model?.Search ?? ""))"
+            placeholder="جستجو در عنوان یا مکان"
+            class="px-3 py-2 border rounded w-72"
+            autocomplete="off" />
+        <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded">جستجو</button>
+
+        <div class="ml-auto flex items-center gap-2">
+            <label class="text-sm text-slate-600">نمایش در هر صفحه:</label>
+            <select id="pageSizeSelector" name="pageSize" class="px-2 py-1 border rounded text-sm">
+                <option value="5" selected='@(Model.PageSize == 5 ? "selected" : null)'>5</option>
+                <option value="10" selected='@(Model.PageSize == 10 ? "selected" : null)'>10</option>
+                <option value="25" selected='@(Model.PageSize == 25 ? "selected" : null)'>25</option>
+                <option value="50" selected='@(Model.PageSize == 50 ? "selected" : null)'>50</option>
+            </select>
+        </div>
+    </form>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-100">
+            <thead class="bg-blue-50">
+                <tr>
+                    <th class="px-3 py-2 text-right text-sm">شناسه</th>
+                    <th class="px-3 py-2 text-right text-sm">عنوان</th>
+                    <th class="px-3 py-2 text-right text-sm">تاریخ (شمسی)</th>
+                    <th class="px-3 py-2 text-right text-sm">مکان</th>
+                    <th class="px-3 py-2 text-right text-sm">تعداد</th>
+                    <th class="px-3 py-2 text-right text-sm">وضعیت</th>
+                    <th class="px-3 py-2 text-center text-sm">عملیات</th>
+                </tr>
+            </thead>
+
+            <tbody id="allsessions-table-body" class="bg-white divide-y divide-slate-100">
+                @if (Model?.Sessions == null || !Model.Sessions.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-8 text-slate-500">هیچ جلسه‌ای یافت نشد.</td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var s in Model.Sessions)
+                    {
+                        // --- امن‌سازی مقادیر (decode سپس encode) ---
+                        var rawTitle = Convert.ToString(s.Title ?? "-");
+                        var titleSafe = WebUtility.HtmlEncode(WebUtility.HtmlDecode(rawTitle));
+
+                        // تاریخ شمسی: اگر DateShamsi از قبل رشته است از آن استفاده می‌کنیم، در غیر اینصورت از PersianDateConverter
+                        string dateShamsiStr;
+                        try
+                        {
+                            if (!string.IsNullOrWhiteSpace(Convert.ToString(s.GetType().GetProperty("DateShamsi")?.GetValue(s, null))))
+                            {
+                                dateShamsiStr = Convert.ToString(s.GetType().GetProperty("DateShamsi")?.GetValue(s, null)) ?? "-";
+                            }
+                            else
+                            {
+                                // اگر property Date (DateTime?) دارید از آن تبدیل کن
+                                var dtProp = s.GetType().GetProperty("Date")?.GetValue(s, null) as DateTime?;
+                                dateShamsiStr = PersianDateConverter.ToShamsiString(dtProp) ?? "-";
+                            }
+                        }
+                        catch
+                        {
+                            dateShamsiStr = "-";
+                        }
+                        dateShamsiStr = WebUtility.HtmlEncode(dateShamsiStr);
+
+                        // location
+                        var rawLoc = Convert.ToString(s.Location ?? "-");
+                        var locationSafe = WebUtility.HtmlEncode(WebUtility.HtmlDecode(rawLoc));
+
+                        // records count: سعی کن property RecordsCount را بخوانی، در غیر اینصورت از Records collection استفاده کن
+                        int recordsCount = 0;
+                        try
+                        {
+                            var rcProp = s.GetType().GetProperty("RecordsCount");
+                            if (rcProp != null)
+                            {
+                                var rcVal = rcProp.GetValue(s, null);
+                                if (rcVal is int ic) recordsCount = ic;
+                                else recordsCount = Convert.ToInt32(rcVal ?? 0);
+                            }
+                            else
+                            {
+                                var recordsEnum = s.GetType().GetProperty("Records")?.GetValue(s, null) as System.Collections.IEnumerable;
+                                if (recordsEnum != null)
+                                {
+                                    int c = 0;
+                                    foreach (var _ in recordsEnum) c++;
+                                    recordsCount = c;
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            recordsCount = 0;
+                        }
+
+                        <tr data-session-id="@s.Id">
+                            <td class="px-3 py-2 text-right text-sm">@Convert.ToString(s.Id)</td>
+                            <td class="px-3 py-2 text-right text-sm">@Html.Raw(titleSafe)</td>
+                            <td class="px-3 py-2 text-right text-sm">@Html.Raw(dateShamsiStr)</td>
+                            <td class="px-3 py-2 text-right text-sm">@Html.Raw(locationSafe)</td>
+                            <td class="px-3 py-2 text-right text-sm">@recordsCount</td>
+                            <td class="px-3 py-2 text-right text-sm">
+                                @if (s.DeletedAt == null)
+                                {
+                                    <span class="inline-block px-2 py-1 rounded text-sm font-semibold text-teal-800 bg-teal-100">فعال</span>
+                                }
+                                else
+                                {
+                                    <span class="inline-block px-2 py-1 rounded text-sm font-semibold text-rose-800 bg-rose-100">بایگانی‌شده</span>
+                                }
+                            </td>
+                            <td class="px-3 py-2 text-center text-sm space-x-2">
+                                <a asp-action="SessionDetails" asp-route-id="@s.Id" class="inline-block px-2 py-1 bg-slate-100 rounded hover:bg-slate-200">جزئیات</a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- pagination مشابه Index دانش‌آموزان -->
+    <div class="mt-4 flex items-center justify-between">
+        <div class="text-sm text-slate-600">نمایش @Model.Sessions.Count() از @Model.Total جلسه</div>
+
+        <div class="flex items-center gap-2">
+            @{
+                var prev = Model.Page > 1 ? Model.Page - 1 : 1;
+                var next = Model.Page < Model.TotalPages ? Model.Page + 1 : Model.TotalPages;
+            }
+            <a asp-action="AllSessions" asp-route-page="1" asp-route-pageSize="@Model.PageSize" asp-route-search="@Model.Search" class="px-2 py-1 border rounded hover:bg-slate-50">« اول</a>
+            <a asp-action="AllSessions" asp-route-page="@prev" asp-route-pageSize="@Model.PageSize" asp-route-search="@Model.Search" class="px-2 py-1 border rounded hover:bg-slate-50">‹ قبلی</a>
+            <span class="px-2 py-1 text-sm">صفحه @Model.Page از @Model.TotalPages</span>
+            <a asp-action="AllSessions" asp-route-page="@next" asp-route-pageSize="@Model.PageSize" asp-route-search="@Model.Search" class="px-2 py-1 border rounded hover:bg-slate-50">بعدی ›</a>
+            <a asp-action="AllSessions" asp-route-page="@Model.TotalPages" asp-route-pageSize="@Model.PageSize" asp-route-search="@Model.Search" class="px-2 py-1 border rounded hover:bg-slate-50">آخر »</a>
+        </div>
+    </div>
+</div>
+
+@section AllSessionsStudentsScripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const pageSizeSelector = document.getElementById("pageSizeSelector");
+            const tableBody = document.getElementById("allsessions-table-body");
+            const loading = document.getElementById("loadingIndicator");
+
+            if (!pageSizeSelector) return;
+
+            pageSizeSelector.addEventListener("change", async function () {
+                const pageSize = this.value;
+                const currentPage = @Model.Page;
+                const search = '@Model.Search';
+                const url = `@Url.Action("AllSessions", "Attendance")?page=${currentPage}&pageSize=${pageSize}&search=${search}`;
+
+                try {
+                    if (loading) loading.classList.remove("hidden");
+
+                    const response = await fetch(url, {
+                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                    });
+
+                    if (!response.ok) {
+                        console.error("خطا در دریافت داده‌ها", response.status);
+                        return;
+                    }
+
+                    const html = await response.text();
+
+                    // استخراج tbody جدید از HTML دریافت‌شده
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, "text/html");
+
+                    // جایگزینی بخش‌های جدول و آمار
+                    const newTableBody = doc.querySelector("#allsessions-table-body");
+                    const newStats = doc.querySelectorAll(".grid > div"); // کارت‌های آمار
+
+                    if (newTableBody && tableBody) {
+                        tableBody.innerHTML = newTableBody.innerHTML;
+                    }
+
+                    // آمار را جایگزین کن (اختیاری)
+                    const statCards = document.querySelectorAll(".grid > div");
+                    if (newStats.length === statCards.length) {
+                        newStats.forEach((card, i) => {
+                            statCards[i].innerHTML = card.innerHTML;
+                        });
+                    }
+
+                } catch (err) {
+                    console.error("AJAX Error:", err);
+                } finally {
+                    if (loading) loading.classList.add("hidden");
+                }
+            });
+        });
+    </script>
+}
