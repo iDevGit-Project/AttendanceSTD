@@ -4,6 +4,21 @@
 @{
     ViewData["Title"] = "جزئیات جلسه - " + (Model.Title ?? "");
 }
+<!-- Archive / Unarchive button -->
+<div class="inline-flex items-center gap-2">
+    @if (Model?.DeletedAt == null)
+    {
+        <button type="button" id="archiveSessionBtn" class="px-3 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 text-sm">
+            بایگانی جلسه
+        </button>
+    }
+    else
+    {
+        <button type="button" id="unarchiveSessionBtn" class="px-3 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 text-sm">
+            بازگردانی از بایگانی
+        </button>
+    }
+</div>
 
 <div class="bg-white rounded-lg border p-6 space-y-4">
     <div class="flex items-center justify-between">
@@ -224,7 +239,24 @@
                     }
 
                     Swal.fire({ icon: 'success', title: 'ذخیره شد', text: (parsed && parsed.message) ? parsed.message : 'اطلاعات ذخیره شد.' })
-                         .then(() => location.reload());
+                        .then(() => {
+                            // get sessionId (try variable from scope, otherwise fallback to hidden input)
+                            let sid = null;
+                            try { sid = typeof sessionId !== 'undefined' && sessionId ? sessionId : null; } catch (e) { sid = null; }
+                            if (!sid) {
+                                const el = document.querySelector('input[name="sessionId"]');
+                                if (el && el.value) sid = Number(el.value);
+                            }
+
+                            if (sid) {
+                                // Redirect back to CreateWizard and include createdSessionId so wizard shows the quick-link
+                                const url = '@Url.Action("CreateWizard", "Attendance")' + '?createdSessionId=' + encodeURIComponent(sid);
+                                window.location.href = url;
+                            } else {
+                                // fallback: reload current page
+                                window.location.reload();
+                            }
+                        });
 
                 } catch (err) {
                     console.error('SaveAttendance fetch error', err);
@@ -232,6 +264,90 @@
                     Swal.fire({ icon: 'error', title: 'خطا', text: 'خطای ارتباط با سرور. جزئیات در کنسول.' });
                 }
             });
+        })();
+    </script>
+    <script>
+        // Archive/unarchive AJAX (put inside existing SessionDetailsScripts)
+        (function(){
+            function getAntiForgeryToken() {
+                const el = document.querySelector('input[name="__RequestVerificationToken"]');
+                return el ? el.value : null;
+            }
+
+            const archiveBtn = document.getElementById('archiveSessionBtn');
+            const unarchiveBtn = document.getElementById('unarchiveSessionBtn');
+
+            async function postAjax(url, data) {
+                const token = getAntiForgeryToken();
+                if (!token) {
+                    Swal.fire({ icon: 'error', title: 'توکن امنیتی پیدا نشد', text: 'صفحه را رفرش کنید.' });
+                    return null;
+                }
+                const fd = new FormData();
+                fd.append('__RequestVerificationToken', token);
+                for (const k in data) {
+                    fd.append(k, data[k]);
+                }
+                try {
+                    const resp = await fetch(url, { method: 'POST', credentials: 'same-origin', body: fd });
+                    const txt = await resp.text();
+                    let json = null;
+                    try { json = JSON.parse(txt); } catch (e) { json = null; }
+                    return { status: resp.status, ok: resp.ok, json: json, text: txt };
+                } catch (err) {
+                    console.error('postAjax error', err);
+                    return { status: 0, ok: false, error: err };
+                }
+            }
+
+            if (archiveBtn) {
+                archiveBtn.addEventListener('click', async function () {
+                    const sid = Number(document.querySelector('input[name="sessionId"]').value);
+                    if (!sid) return Swal.fire({ icon: 'error', title: 'شناسه جلسه پیدا نشد' });
+
+                    const confirm = await Swal.fire({
+                        title: 'آیا مطمئن هستید؟',
+                        text: 'جلسه به آرشیو منتقل خواهد شد. در صورت نیاز بعداً می‌توانید آن را بازگردانی کنید.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'بایگانی کن',
+                        cancelButtonText: 'انصراف'
+                    });
+                    if (!confirm.isConfirmed) return;
+
+                    Swal.fire({ title: 'در حال بایگانی...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+                    const res = await postAjax('@Url.Action("ArchiveSessionAjax", "Attendance")', { id: sid });
+                    Swal.close();
+                    if (!res) return;
+                    if (!res.ok) {
+                        const msg = (res.json && (res.json.error || res.json.message)) ? (res.json.error || res.json.message) : res.text || 'خطا';
+                        return Swal.fire({ icon: 'error', title: 'خطا', text: msg });
+                    }
+                    Swal.fire({ icon: 'success', title: 'بایگانی شد', text: (res.json && res.json.message) ? res.json.message : 'جلسه بایگانی شد.' })
+                        .then(() => {
+                            // بعد از موفقیت برو به صفحه ArchivedSessions
+                            window.location.href = '@Url.Action("ArchivedSessions", "Attendance")';
+                        });
+                });
+            }
+
+            if (unarchiveBtn) {
+                unarchiveBtn.addEventListener('click', async function () {
+                    const sid = Number(document.querySelector('input[name="sessionId"]').value);
+                    if (!sid) return Swal.fire({ icon: 'error', title: 'شناسه جلسه پیدا نشد' });
+
+                    Swal.fire({ title: 'در حال بازگردانی...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+                    const res = await postAjax('@Url.Action("UnarchiveSessionAjax", "Attendance")', { id: sid });
+                    Swal.close();
+                    if (!res) return;
+                    if (!res.ok) {
+                        const msg = (res.json && (res.json.error || res.json.message)) ? (res.json.error || res.json.message) : res.text || 'خطا';
+                        return Swal.fire({ icon: 'error', title: 'خطا', text: msg });
+                    }
+                    Swal.fire({ icon: 'success', title: 'بازگردانی شد', text: (res.json && res.json.message) ? res.json.message : 'جلسه بازگردانی شد.' })
+                        .then(() => location.reload());
+                });
+            }
         })();
     </script>
 }

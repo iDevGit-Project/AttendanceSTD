@@ -1,0 +1,92 @@
+﻿@model Attendance.Data.VModels.ArchivedSess.ArchivedSessionsViewModel
+@using Attendance.Data.Entities
+@{
+    ViewData["Title"] = "جلسات بایگانی‌شده";
+}
+
+<div class="bg-white rounded-lg p-6">
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-lg font-semibold">جلسات بایگانی‌شده</h1>
+        <a asp-action="Index" asp-controller="Attendance" class="px-3 py-2 bg-slate-100 rounded">بازگشت</a>
+    </div>
+
+    <form method="get" class="mb-4 flex gap-2">
+        <input type="text" name="search" value="@Model.Search" placeholder="جستجو در عنوان یا مکان" class="px-3 py-2 border rounded w-72" />
+        <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded">جستجو</button>
+    </form>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-100">
+            <thead class="bg-blue-50">
+                <tr>
+                    <th class="px-3 py-2 text-right">شناسه</th>
+                    <th class="px-3 py-2 text-right">عنوان</th>
+                    <th class="px-3 py-2 text-right">تاریخ</th>
+                    <th class="px-3 py-2 text-right">مکان</th>
+                    <th class="px-3 py-2 text-right">بایگانی‌شده در</th>
+                    <th class="px-3 py-2 text-center">عملیات</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-slate-100">
+                @if (Model.Sessions == null || !Model.Sessions.Any())
+                {
+                    <tr><td colspan="6" class="text-center py-6 text-slate-500">هیچ جلسه‌ای یافت نشد.</td></tr>
+                }
+                else
+                {
+                    @foreach (var s in Model.Sessions)
+                    {
+                        <tr>
+                            <td class="px-3 py-2 text-right">@s.Id</td>
+                            <td class="px-3 py-2 text-right">@Html.Encode(s.Title)</td>
+                            <td class="px-3 py-2 text-right">@(s.Date.HasValue? s.Date.Value.ToString("yyyy-MM-dd") : "-")</td>
+                            <td class="px-3 py-2 text-right">@Html.Encode(s.Location ?? "-")</td>
+                            <td class="px-3 py-2 text-right">@(s.DeletedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                            <td class="px-3 py-2 text-center">
+                                <a asp-action="SessionDetails" asp-route-id="@s.Id" class="px-3 py-1 bg-slate-100 rounded">مشاهده</a>
+                                <button type="button" data-id="@s.Id" class="unarchive-btn px-3 py-1 bg-emerald-600 text-white rounded ml-2">بازگردانی</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section ArchivedSessionsScripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function(){
+            // اجرا پس از بارگذاری DOM
+            document.addEventListener('DOMContentLoaded', function () {
+                function getToken(){ const el=document.querySelector('input[name="__RequestVerificationToken"]'); return el ? el.value : null; }
+                async function post(url, data){
+                    const token = getToken();
+                    if (!token) { Swal.fire({icon:'error',title:'توکن امنیتی پیدا نشد', text:'صفحه را رفرش کنید.'}); return null; }
+                    const fd = new FormData();
+                    fd.append('__RequestVerificationToken', token);
+                    for (const k in data) fd.append(k, data[k]);
+                    const resp = await fetch(url, { method: 'POST', credentials: 'same-origin', body: fd });
+                    const txt = await resp.text();
+                    try { return JSON.parse(txt); } catch { return txt; }
+                }
+
+                document.querySelectorAll('.unarchive-btn').forEach(btn=>{
+                    btn.addEventListener('click', async function(){
+                        const id = this.getAttribute('data-id');
+                        const r = await Swal.fire({ title:'آیا مطمئن هستید؟', showCancelButton:true, confirmButtonText:'بله', cancelButtonText:'خیر' });
+                        if (!r.isConfirmed) return;
+                        Swal.showLoading();
+                        const res = await post('@Url.Action("UnarchiveSessionAjax", "Attendance")', { id: id });
+                        Swal.close();
+                        if (!res) return;
+                        if (res.error) return Swal.fire({icon:'error', title:'خطا', text: res.error});
+                        Swal.fire({icon:'success', title:'بازگردانی شد'}).then(()=> location.reload());
+                    });
+                });
+            });
+        })();
+    </script>
+}

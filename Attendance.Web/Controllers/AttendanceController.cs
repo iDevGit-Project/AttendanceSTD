@@ -1,5 +1,6 @@
 ﻿using Attendance.Data.Conext;
 using Attendance.Data.Entities;
+using Attendance.Data.VModels.ArchivedSess;
 using Attendance.Data.VModels.Attendances;
 using Attendance.Web.Helpers;
 using Attendance.Web.Hubs;
@@ -340,8 +341,6 @@ namespace Attendance.Web.Controllers
                 return StatusCode(500, new { error = "خطای غیرمنتظره در ذخیره‌سازی", message = ex.Message, inner = ex.InnerException?.Message });
             }
         }
-
-        // DTO
         public class RecordDto
         {
             public int? recordId { get; set; }
@@ -399,77 +398,104 @@ namespace Attendance.Web.Controllers
             return View(session);
         }
 
-        //[HttpGet]
-        //public async Task<IActionResult> SessionDetails(long id)
-        //{
-        //    // diagnostic log
-        //    _logger?.LogInformation("SessionDetails diagnostic for id={Id}", id);
-
-        //    var session = await _db.AttendanceSessions
-        //        .AsNoTracking()
-        //        .FirstOrDefaultAsync(s => s.Id == id);
-
-        //    if (session == null) return NotFound();
-
-        //    // load records explicitly (bypass navigation mapping issues)
-        //    var records = await _db.AttendanceRecords
-        //        .Include(r => r.Student)
-        //        .Where(r => r.SessionId == id)
-        //        .AsNoTracking()
-        //        .ToListAsync();
-
-        //    // assign loaded collection to session.Records (if session.Records is ICollection<AttendanceRecord>)
-        //    session.Records = records;
-
-        //    _logger?.LogInformation("SessionDetails diagnostic loaded {Cnt} records for session {Id}", records.Count, id);
-
-        //    return View(session);
-        //}
-
-        //[HttpGet]
-        //public async Task<IActionResult> SessionDetails(long id)
-        //{
-        //    // 1) ابتدا خود جلسه را (بدون احتمال فیلتر/خطا) بخوان
-        //    var session = await _db.AttendanceSessions
-        //        .AsNoTracking()
-        //        .FirstOrDefaultAsync(s => s.Id == id);
-
-        //    if (session == null)
-        //        return NotFound();
-
-        //    // 2) سپس به صورت صریح همه رکوردهای جلسه را از جدول AttendanceRecords بخوان
-        //    //    و navigation Student را نیز include کن تا اطلاعات دانش‌آموز در View موجود باشد.
-        //    var records = await _db.AttendanceRecords
-        //        .AsNoTracking()
-        //        .Where(r => r.SessionId == id)
-        //        .Include(r => r.Student)
-        //        // اگر می‌خواهی ترتیب مشخصی داشته باشی (مثلاً بر اساس نام خانوادگی):
-        //        .OrderBy(r => r.Student.LastName)
-        //        .ThenBy(r => r.Student.FirstName)
-        //        .ToListAsync();
-
-        //    // 3) جایگزینی collection session.Records با لیست خوانده‌شده
-        //    //    (پیش‌فرض مدل شما ICollection<AttendanceRecord> دارد و setter هم وجود دارد)
-        //    session.Records = records;
-
-        //    // 4) (اختیاری) لاگ برای بررسی تعداد رکوردها در لاگ سرور
-        //    _logger?.LogInformation("SessionDetails: session {SessionId} loaded with {Count} records", id, records.Count);
-
-        //    return View(session);
-        //}
-
-        // ----------  POST ArchiveSession ----------
+        // ---------------- Archive / Unarchive (AJAX) ----------------
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ArchiveSession([FromForm] long id)
+        public async Task<IActionResult> ArchiveSessionAjax([FromForm] long id)
         {
-            var s = await _db.AttendanceSessions.FindAsync(id);
-            if (s == null) return NotFound(new { error = "جلسه پیدا نشد." });
-            s.DeletedAt = DateTime.UtcNow;
-            var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(userIdClaim, out var uid)) s.DeletedById = uid;
-            await _db.SaveChangesAsync();
-            return Ok(new { message = "جلسه آرشیو شد." });
+            if (id <= 0) return BadRequest(new { error = "شناسه نامعتبر است." });
+
+            try
+            {
+                var session = await _db.AttendanceSessions.FirstOrDefaultAsync(s => s.Id == id);
+                if (session == null) return NotFound(new { error = "جلسه پیدا نشد." });
+
+                if (session.DeletedAt.HasValue)
+                {
+                    // already archived
+                    return BadRequest(new { error = "جلسه از قبل بایگانی شده است." });
+                }
+
+                // set DeletedAt / DeletedById (از claim تلاش کن id عددی بگیری)
+                session.DeletedAt = DateTime.UtcNow;
+                var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var parsedId))
+                    session.DeletedById = parsedId;
+                else
+                    session.DeletedById = null;
+
+                await _db.SaveChangesAsync();
+
+                _logger?.LogInformation("Attendance session {SessionId} archived by {User}", id, User?.Identity?.Name);
+                return Json(new { ok = true, message = "جلسه بایگانی شد." });
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error archiving session {SessionId}", id);
+                return StatusCode(500, new { error = "خطا در بایگانی جلسه." });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UnarchiveSessionAjax([FromForm] long id)
+        {
+            if (id <= 0) return BadRequest(new { error = "شناسه نامعتبر است." });
+
+            try
+            {
+                var session = await _db.AttendanceSessions.FirstOrDefaultAsync(s => s.Id == id);
+                if (session == null) return NotFound(new { error = "جلسه پیدا نشد." });
+
+                if (!session.DeletedAt.HasValue)
+                {
+                    return BadRequest(new { error = "جلسه در حالت بایگانی نیست." });
+                }
+
+                session.DeletedAt = null;
+                session.DeletedById = null;
+                await _db.SaveChangesAsync();
+
+                _logger?.LogInformation("Attendance session {SessionId} unarchived by {User}", id, User?.Identity?.Name);
+                return Json(new { ok = true, message = "جلسه از بایگانی خارج شد." });
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error unarchiving session {SessionId}", id);
+                return StatusCode(500, new { error = "خطا در بازگردانی جلسه." });
+            }
+        }
+
+        // ---------------- Archived list (View) ----------------
+        [HttpGet]
+        public async Task<IActionResult> ArchivedSessions(string? search = null, int page = 1, int pageSize = 20)
+        {
+            // filter sessions that have DeletedAt not null (آرشیو شده)
+            var q = _db.AttendanceSessions.AsNoTracking().Where(s => s.DeletedAt != null);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                q = q.Where(x => (x.Title ?? "").Contains(s) || (x.Location ?? "").Contains(s));
+            }
+
+            var total = await q.CountAsync();
+            var items = await q.OrderByDescending(x => x.DeletedAt)
+                               .Skip((page - 1) * pageSize)
+                               .Take(pageSize)
+                               .ToListAsync();
+
+            // lightweight VM for view (you can expand)
+            var vm = new ArchivedSessionsViewModel
+            {
+                Sessions = items,
+                Page = page,
+                PageSize = pageSize,
+                Total = total,
+                Search = search
+            };
+
+            return View(vm);
         }
 
         // ----------  POST RestoreSession ----------
