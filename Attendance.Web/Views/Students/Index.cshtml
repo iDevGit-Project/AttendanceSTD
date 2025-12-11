@@ -18,9 +18,7 @@
                 var archiveHasInactive = (Model?.InactiveStudents ?? 0) > 0;
             }
 
-            <a asp-action="Archive"
-               id="archiveArchiveBtn"
-               class="inline-block font-bold px-3 py-2 rounded transition-all duration-300
+            <a asp-action="Archive" id="archiveArchiveBtn" class="inline-block font-bold px-3 py-2 rounded transition-all duration-300
           @(archiveHasInactive
                               ? "bg-rose-500 text-white shadow-lg archive-on animate-archive-pulse"
                               : "bg-rose-100/70 text-rose-800 hover:bg-rose-200")">
@@ -50,14 +48,12 @@
                         <span class="font-bold text-slate-700"> @Model.TotalStudents نفر</span>
                     </div>
                 </div>
-
                 <div class="bg-teal-100 rounded-lg p-2">
                     <div class="text-sm text-teal-800">
                         تعداد دانش‌آموزان فعال:
                         <span class="font-bold text-teal-700"> @Model.ActiveStudents نفر</span>
                     </div>
                 </div>
-
                 <div class="bg-rose-100 rounded-lg p-2">
                     <div class="text-sm text-rose-800">
                         تعداد دانش‌آموزان غیرفعال:
@@ -95,11 +91,9 @@
     </div>
 
     <!-- Loader overlay -->
-    <div id="students-loader"
-         class="fixed inset-0 z-50 flex items-center justify-center bg-white/40 backdrop-blur-sm hidden animate-fade-scale">
+    <div id="students-loader" class="fixed inset-0 z-50 flex items-center justify-center bg-white/40 backdrop-blur-sm hidden animate-fade-scale">
         <div class="p-4 rounded-lg bg-white shadow-xl flex items-center gap-3">
-            <svg class="w-6 h-6 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-                 viewBox="0 0 24 24">
+            <svg class="w-6 h-6 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
             </svg>
