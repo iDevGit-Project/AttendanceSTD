@@ -4,36 +4,15 @@
 @using System.Net
 @{
     ViewData["Title"] = "جلسات بایگانی‌شده";
-    // helper for encoding
     Func<string?, string> enc = s => string.IsNullOrEmpty(s) ? "-" : HtmlEncoder.Default.Encode(s);
-    // helper to convert UTC -> Iran local time string (safely tries Windows/Linux tz ids)
-    Func<DateTime?, string> toIranLocalString = dt =>
-    {
-        if (!dt.HasValue) return "-";
-        try
-        {
-            var utc = DateTime.SpecifyKind(dt.Value, DateTimeKind.Utc);
-            TimeZoneInfo tz = null;
-            try { tz = TimeZoneInfo.FindSystemTimeZoneById("Iran Standard Time"); } catch { /* ignore */ }
-            if (tz == null)
-            {
-                try { tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Tehran"); } catch { /* ignore */ }
-            }
-            if (tz != null)
-            {
-                var local = TimeZoneInfo.ConvertTimeFromUtc(utc, tz);
-                return local.ToString("yyyy-MM-dd HH:mm");
-            }
-            // fallback: show utc as-is (but formatted)
-            return utc.ToString("yyyy-MM-dd HH:mm") + " (UTC)";
-        }
-        catch
-        {
-            try { return dt.Value.ToString("yyyy-MM-dd HH:mm"); } catch { return "-"; }
-        }
-    };
 }
 <div class="bg-white rounded-lg p-6">
+
+    <!-- ✅ Anti-Forgery Token (فقط برای AJAX – مخفی) -->
+    <form method="post" style="display:none">
+        @Html.AntiForgeryToken()
+    </form>
+
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-lg font-semibold">جلسات بایگانی‌شده</h1>
         <a asp-action="Index" asp-controller="Home" class="px-3 py-2 bg-slate-100 rounded">بازگشت</a>
@@ -52,7 +31,7 @@
         <table class="min-w-full divide-y divide-slate-100">
             <thead class="bg-blue-50">
                 <tr>
-                    <th class="px-3 py-2 text-center">شناسه</th>
+                    @* <th class="px-3 py-2 text-center">شناسه</th> *@
                     <th class="px-3 py-2 text-center">عنوان</th>
                     <th class="px-3 py-2 text-center">تاریخ</th>
                     <th class="px-3 py-2 text-center">مکان</th>
@@ -63,41 +42,64 @@
             <tbody class="bg-white divide-y divide-slate-100">
                 @if (Model?.Sessions == null || !Model.Sessions.Any())
                 {
-                    <tr><td colspan="6" class="text-center py-6 text-slate-500">هیچ جلسه‌ای یافت نشد.</td></tr>
+                    <tr>
+                        <td colspan="6" class="text-center py-6 text-slate-500">
+                            هیچ جلسه‌ای یافت نشد.
+                        </td>
+                    </tr>
                 }
                 else
                 {
                     @foreach (var s in Model.Sessions)
                     {
-                        <tr>
-                            <td class="px-3 py-2 text-right">@s.Id</td>
-                            <td class="px-3 py-2 text-right">@s.Title</td>
-                            <td class="px-3 py-2 text-right">@(s.Date.HasValue? s.Date.Value.ToString("yyyy-MM-dd") : "-")</td>
-                            <td class="px-3 py-2 text-right">@((s.Location ?? "-"))</td>
-                            @functions {
-                                private string FormatIranTime(DateTime? utc)
-                                {
-                                    if (!utc.HasValue) return "-";
-                                    try
-                                    {
-                                        // "Iran Standard Time" در ویندوز؛ در لینوکس ممکن است نام متفاوت باشد ("Asia/Tehran")
-                                        TimeZoneInfo tz;
-                                        try { tz = TimeZoneInfo.FindSystemTimeZoneById("Iran Standard Time"); }
-                                        catch { tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Tehran"); }
-                                        var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc.Value, DateTimeKind.Utc), tz);
-                                        return local.ToString("yyyy-MM-dd HH:mm");
-                                    }
-                                    catch { return utc.Value.ToString("yyyy-MM-dd HH:mm"); }
-                                }
+                <tr>
+                    @* <td class="px-3 py-2 text-right">@s.Id</td> *@
+                    <td class="px-3 py-2 text-right">@s.Title</td>
+                    <td class="px-3 py-2 text-right">
+                        @(s.Date.HasValue? s.Date.Value.ToString("yyyy-MM-dd") : "-")
+                    </td>
+                    <td class="px-3 py-2 text-right">@((s.Location ?? "-"))</td>
+
+                    @functions {
+                        private string FormatIranTime(DateTime? utc)
+                        {
+                            if (!utc.HasValue) return "-";
+                            try
+                            {
+                                TimeZoneInfo tz;
+                                try { tz = TimeZoneInfo.FindSystemTimeZoneById("Iran Standard Time"); }
+                                catch { tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Tehran"); }
+
+                                var local = TimeZoneInfo.ConvertTimeFromUtc(
+                                DateTime.SpecifyKind(utc.Value, DateTimeKind.Utc), tz);
+
+                                return local.ToString("yyyy-MM-dd HH:mm");
                             }
-                            <td class="px-3 py-2 text-right">@FormatIranTime(s.DeletedAt)</td>
-                            <td class="px-3 py-2 text-center">
-                                <a asp-action="SessionDetails" asp-route-id="@s.Id" class="px-3 py-1 bg-slate-100 rounded">مشاهده</a>
-                                <button type="button" data-id="@s.Id" class="unarchive-btn px-3 py-1 bg-emerald-600 text-white rounded ml-2">بازگردانی</button>
-                            </td>
-                        </tr>
+                            catch
+                            {
+                                return utc.Value.ToString("yyyy-MM-dd HH:mm");
+                            }
+                        }
                     }
-                }
+
+                    <td class="px-3 py-2 text-right">@FormatIranTime(s.DeletedAt)</td>
+
+                    <td class="px-3 py-2 text-center">
+                        <a asp-action="SessionDetails"
+                           asp-route-id="@s.Id"
+                           class="px-3 py-1 bg-slate-100 rounded">
+                            مشاهده
+                        </a>
+
+                        <button type="button"
+                                data-id="@s.Id"
+                                class="unarchive-btn px-3 py-1 bg-emerald-600 text-white rounded ml-2">
+                            بازگردانی
+                        </button>
+                    </td>
+                </tr>
+                                }
+                                }
             </tbody>
         </table>
     </div>
@@ -106,31 +108,77 @@
 @section ArchivedSessionsScripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        (function(){
+        (function () {
             document.addEventListener('DOMContentLoaded', function () {
-                function getToken(){ const el=document.querySelector('input[name="__RequestVerificationToken"]'); return el ? el.value : null; }
-                async function post(url, data){
+
+                function getToken() {
+                    const el = document.querySelector('input[name="__RequestVerificationToken"]');
+                    return el ? el.value : null;
+                }
+
+                async function post(url, data) {
                     const token = getToken();
-                    if (!token) { Swal.fire({icon:'error',title:'توکن امنیتی پیدا نشد', text:'صفحه را رفرش کنید.'}); return null; }
+                    if (!token) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'توکن امنیتی پیدا نشد',
+                            text: 'صفحه را رفرش کنید.'
+                        });
+                        return null;
+                    }
+
                     const fd = new FormData();
                     fd.append('__RequestVerificationToken', token);
                     for (const k in data) fd.append(k, data[k]);
-                    const resp = await fetch(url, { method: 'POST', credentials: 'same-origin', body: fd });
+
+                    const resp = await fetch(url, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        body: fd
+                    });
+
                     const txt = await resp.text();
                     try { return JSON.parse(txt); } catch { return txt; }
                 }
 
-                document.querySelectorAll('.unarchive-btn').forEach(btn=>{
-                    btn.addEventListener('click', async function(){
+                document.querySelectorAll('.unarchive-btn').forEach(btn => {
+                    btn.addEventListener('click', async function () {
+
                         const id = this.getAttribute('data-id');
-                        const r = await Swal.fire({ title:'آیا مطمئن هستید؟', showCancelButton:true, confirmButtonText:'بله', cancelButtonText:'خیر' });
+
+                        const r = await Swal.fire({
+                            title: 'آیا مطمئن هستید؟',
+                            showCancelButton: true,
+                            confirmButtonText: 'بله',
+                            cancelButtonText: 'خیر'
+                        });
+
                         if (!r.isConfirmed) return;
-                        Swal.showLoading();
-                        const res = await post('@Url.Action("UnarchiveSessionAjax", "Attendance")', { id: id });
+
+                        Swal.fire({
+                            title: 'در حال انجام عملیات...',
+                            allowOutsideClick: false,
+                            didOpen: () => Swal.showLoading()
+                        });
+
+                        const res = await post('@Url.Action("RestoreSession", "Attendance")', { id: id });
+
                         Swal.close();
+
                         if (!res) return;
-                        if (res.error) return Swal.fire({icon:'error', title:'خطا', text: res.error});
-                        Swal.fire({icon:'success', title:'بازگردانی شد'}).then(()=> location.reload());
+
+                        if (res.error) {
+                            return Swal.fire({
+                                icon: 'error',
+                                title: 'خطا',
+                                text: res.error
+                            });
+                        }
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'بازگردانی شد'
+                        }).then(() => location.reload());
                     });
                 });
             });
