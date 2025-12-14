@@ -27,12 +27,17 @@
 
             <a asp-action="Create"
                class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">
-                افزودن دانش‌آموز جدید
+                افزودن دانش‌آموز
+            </a>
+
+            <a asp-action="CreateWizard" asp-controller="Attendance"
+               class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">
+                حضور و غیاب جدید
             </a>
 
             <button type="button" onclick="printStudentTableWithSwal()"
                     class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">
-                دریافت گزارش
+                گزارشات
             </button>
         </div>
     </div>
