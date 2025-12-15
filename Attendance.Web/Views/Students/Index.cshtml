@@ -95,20 +95,6 @@
         </div>
     </div>
 
-    <!-- Loader overlay -->
-    <div id="students-loader" class="fixed inset-0 z-50 flex items-center justify-center bg-white/40 backdrop-blur-sm hidden animate-fade-scale">
-        <div class="p-4 rounded-lg bg-white shadow-xl flex items-center gap-3">
-            <svg class="w-6 h-6 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-            </svg>
-
-            <div>
-                <div class="text-sm font-medium text-slate-700">در حال بارگذاری...</div>
-                <div class="text-xs text-slate-500">لطفاً منتظر بمانید.</div>
-            </div>
-        </div>
-    </div>
 
     <!-- TempData notifications (server-side) -->
     @if (TempData["SuccessMessage"] is string success)
@@ -121,8 +107,6 @@
     }
 
     <div class="bg-slate-100/20 border rounded">
-        <div id="loadingIndicator" class="hidden text-center text-slate-800 my-3">در حال بارگذاری...</div>
-
         <table class="min-w-full divide-y divide-slate-100">
             <thead class="bg-blue-100/20">
                 <tr>

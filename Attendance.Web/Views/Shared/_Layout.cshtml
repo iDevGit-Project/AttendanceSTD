@@ -6,8 +6,6 @@
     <title>@ViewData["Title"] - سامانه مدیریت دانش آموزان</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/output.css" asp-append-version="true" />
-    <!-- Dropzone CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dropzone@5.9.3/dist/min/dropzone.min.css" />
 </head>
 <body class ="bg-svg-grid bg-slate-50 min-h-screen text-gray-800 min-h-screen flex flex-col">
     <!-- نوار بالا -->
@@ -165,6 +163,55 @@
         <!-- محتوای مرکزی -->
         <main class="flex-1 overflow-y-auto p-6">
             @RenderBody()
+            <!-- استفاده از انیمیشن به صورت سراسری در پروژه -->
+            <div id="global-loader"
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-white/40 backdrop-blur-sm hidden animate-fade-scale">
+                <div class="p-4 rounded-lg bg-white shadow-xl flex items-center gap-3">
+                    <svg class="w-6 h-6 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+
+                    <div>
+                        <div class="text-sm font-medium text-slate-700">در حال بارگذاری...</div>
+                        <div class="text-xs text-slate-500">لطفاً منتظر بمانید</div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+
+                    const loader = document.getElementById('students-loader');
+                    if (!loader) return;
+
+                    // فقط لینک‌های واقعی داخلی
+                    document.querySelectorAll('a[href]').forEach(link => {
+
+                        link.addEventListener('click', function (e) {
+
+                            // اگر لینک غیرفعال است
+                            if (this.classList.contains('cursor-not-allowed')) return;
+
+                            // اگر target=_blank دارد
+                            if (this.target === '_blank') return;
+
+                            // اگر href خالی یا #
+                            const href = this.getAttribute('href');
+                            if (!href || href === '#') return;
+
+                            // اگر لینک خارجی است
+                            if (href.startsWith('http') && !href.startsWith(window.location.origin)) return;
+
+                            // ✅ فقط Loader را نشان بده
+                            loader.classList.remove('hidden');
+
+                            // ⛔ هیچ preventDefault
+                            // ⛔ هیچ fetch
+                        });
+                    });
+
+                });
+            </script>
         </main>
     </div>
 
