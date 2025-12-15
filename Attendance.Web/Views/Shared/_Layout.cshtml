@@ -44,9 +44,12 @@
                     <span>لیست دانش آموزان</span>
                 </a>
 
-                <a asp-controller="Attendance" asp-action="CreateWizard" class="block px-3 py-2 rounded-md text-slate-600 hover:bg-blue-100/70">
-                    <span> حضور و غیاب</span>
+                <a asp-controller="Attendance"
+                   asp-action="CreateWizard"
+                   class="block px-3 py-2 rounded-md text-slate-600 hover:bg-blue-100/70">
+                    حضور و غیاب
                 </a>
+
 
                 <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
                     <span>لیست مربیان</span>
@@ -111,8 +114,10 @@
                     <span>لیست دانش آموزان</span>
                 </a>
 
-                <a asp-controller="Attendance" asp-action="CreateWizard" class="block px-3 py-2 rounded-md text-slate-600 hover:bg-blue-100/70">
-                    <span> حضور و غیاب</span>
+                <a asp-controller="Attendance"
+                   asp-action="CreateWizard"
+                   class="block px-3 py-2 rounded-md text-slate-600 hover:bg-blue-100/70">
+                    حضور و غیاب
                 </a>
 
                 <a asp-controller="#" asp-action="Index" class="block px-3 py-2 opacity-50 cursor-not-allowed rounded-md text-slate-600 hover:bg-blue-100/70">
@@ -163,61 +168,89 @@
         <!-- محتوای مرکزی -->
         <main class="flex-1 overflow-y-auto p-6">
             @RenderBody()
-            <!-- استفاده از انیمیشن به صورت سراسری در پروژه -->
-            <div id="global-loader"
-                 class="fixed inset-0 z-50 flex items-center justify-center bg-white/40 backdrop-blur-sm hidden animate-fade-scale">
-                <div class="p-4 rounded-lg bg-white shadow-xl flex items-center gap-3">
-                    <svg class="w-6 h-6 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                    </svg>
-
-                    <div>
-                        <div class="text-sm font-medium text-slate-700">در حال بارگذاری...</div>
-                        <div class="text-xs text-slate-500">لطفاً منتظر بمانید</div>
-                    </div>
-                </div>
-            </div>
-            <script>
-                document.addEventListener('DOMContentLoaded', function () {
-
-                    const loader = document.getElementById('students-loader');
-                    if (!loader) return;
-
-                    // فقط لینک‌های واقعی داخلی
-                    document.querySelectorAll('a[href]').forEach(link => {
-
-                        link.addEventListener('click', function (e) {
-
-                            // اگر لینک غیرفعال است
-                            if (this.classList.contains('cursor-not-allowed')) return;
-
-                            // اگر target=_blank دارد
-                            if (this.target === '_blank') return;
-
-                            // اگر href خالی یا #
-                            const href = this.getAttribute('href');
-                            if (!href || href === '#') return;
-
-                            // اگر لینک خارجی است
-                            if (href.startsWith('http') && !href.startsWith(window.location.origin)) return;
-
-                            // ✅ فقط Loader را نشان بده
-                            loader.classList.remove('hidden');
-
-                            // ⛔ هیچ preventDefault
-                            // ⛔ هیچ fetch
-                        });
-                    });
-
-                });
-            </script>
         </main>
     </div>
 
     <footer class="bg-white border-t text-center py-4 text-xs text-slate-400">
         1404-2025 | کلیه حقوق سامانه محفوظ است. &copy;
     </footer>
+    <!-- Global Fullscreen Loader -->
+    <div id="global-loader"
+         class="fixed inset-0 z-[9999] flex items-center justify-center
+            bg-black/40 backdrop-blur-sm
+            opacity-0 pointer-events-none
+            transition-opacity duration-300 ease-out">
+
+        <div class="bg-white rounded-xl shadow-2xl px-6 py-4
+                transform scale-95 transition-all duration-300">
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 animate-spin text-blue-600"
+                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10"
+                            stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                          d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+                <div>
+                    <div class="text-sm font-semibold text-slate-700">در حال بارگذاری…</div>
+                    <div class="text-xs text-slate-500">لطفاً منتظر بمانید</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+
+            const loader = document.getElementById('global-loader');
+            if (!loader) return;
+
+            function showLoader() {
+                loader.classList.remove('opacity-0', 'pointer-events-none');
+                loader.classList.add('opacity-100');
+                loader.firstElementChild.classList.remove('scale-95');
+                loader.firstElementChild.classList.add('scale-100');
+            }
+
+            function hideLoader() {
+                loader.classList.add('opacity-0', 'pointer-events-none');
+                loader.firstElementChild.classList.add('scale-95');
+            }
+
+            document.addEventListener('click', function (e) {
+
+                const link = e.target.closest('a');
+                if (!link) return;
+
+                const href = link.getAttribute('href');
+                if (!href || href === '#') return;
+                if (link.target === '_blank') return;
+                if (link.classList.contains('cursor-not-allowed')) return;
+
+                // لینک خارجی
+                if (href.startsWith('http') && !href.startsWith(location.origin)) return;
+
+                e.preventDefault(); // ✅ اینجا ضروری است
+
+                showLoader();
+
+                // اجازه بده مرورگر repaint کنه
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 120); // طبیعی، نه مصنوعی
+                });
+
+            });
+
+            // Back / Forward / Refresh
+            window.addEventListener('pageshow', function () {
+                hideLoader();
+            });
+
+        })();
+    </script>
+
 
     <script>
         function toggleMobileMenu() {
@@ -260,6 +293,40 @@
           }
           requestAnimationFrame(rafLoop);
         })();
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+
+            const loader = document.getElementById('global-loader');
+            if (!loader) return;
+
+            // فقط لینک‌های واقعی داخلی
+            document.querySelectorAll('a[href]').forEach(link => {
+
+                link.addEventListener('click', function (e) {
+
+                    // اگر لینک غیرفعال است
+                    if (this.classList.contains('cursor-not-allowed')) return;
+
+                    // اگر target=_blank دارد
+                    if (this.target === '_blank') return;
+
+                    // اگر href خالی یا #
+                    const href = this.getAttribute('href');
+                    if (!href || href === '#') return;
+
+                    // اگر لینک خارجی است
+                    if (href.startsWith('http') && !href.startsWith(window.location.origin)) return;
+
+                    // ✅ فقط Loader را نشان بده
+                    loader.classList.remove('hidden');
+
+                    // ⛔ هیچ preventDefault
+                    // ⛔ هیچ fetch
+                });
+            });
+
+        });
     </script>
 </body>
 </html>
