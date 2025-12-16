@@ -175,25 +175,16 @@
         1404-2025 | کلیه حقوق سامانه محفوظ است. &copy;
     </footer>
     <!-- Global Fullscreen Loader -->
-    <div id="global-loader"
-         class="fixed inset-0 z-[9999] flex items-center justify-center
-            bg-black/40 backdrop-blur-sm
-            opacity-0 pointer-events-none
-            transition-opacity duration-300 ease-out">
-
-        <div class="bg-white rounded-xl shadow-2xl px-6 py-4
-                transform scale-95 transition-all duration-300">
+    <div id="global-loader" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-800/70 opacity-0 pointer-events-none transition-opacity duration-300 ease-out">
+        <div class="bg-slate-800 rounded-lg shadow-2xl px-6 py-4 transform scale-95 transition-all duration-300">
             <div class="flex items-center gap-3">
-                <svg class="w-6 h-6 animate-spin text-blue-600"
-                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10"
-                            stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor"
-                          d="M4 12a8 8 0 018-8v8z"></path>
+                <svg class="w-6 h-6 animate-spin text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10"  stroke="currentColor" stroke-width="3"></circle>
+                    <path class="opacity-75" fill="currentColor"  d="M4 12a8 8 0 018-8v8z"></path>
                 </svg>
                 <div>
-                    <div class="text-sm font-semibold text-slate-700">در حال بارگذاری…</div>
-                    <div class="text-xs text-slate-500">لطفاً منتظر بمانید</div>
+                    <div class="text-sm text-center text-slate-50"> سیستم در حال اجرای درخواست شما.</div>
+                    <div class="text-xs text-center text-slate-200">لطفاً منتظر بمانید...</div>
                 </div>
             </div>
         </div>
@@ -250,7 +241,6 @@
 
         })();
     </script>
-
 
     <script>
         function toggleMobileMenu() {
