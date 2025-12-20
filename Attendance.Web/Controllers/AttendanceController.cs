@@ -608,7 +608,7 @@ namespace Attendance.Web.Controllers
         {
             public int? recordId { get; set; }
             public int studentId { get; set; }
-            public int status { get; set; }
+            public int? status { get; set; } // در زمانی که کاربر گزینه ای رو انتخاب نکرده باشد میبایست به صورت پیش فرض قرارگیرد
             public string? note { get; set; }
             public int? lateMinutes { get; set; }
         }

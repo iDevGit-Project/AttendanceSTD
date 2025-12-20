@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Attendance.Data.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,7 +25,12 @@ namespace Attendance.Data.VModels.Attendances
         public int PresentCount { get; set; }
         public int AbsentCount { get; set; }
 
+        // 👇 جدید (برای Tabs)
+        public Dictionary<string, List<Student>> StudentsByGrade { get; set; } = new();
+        public List<Student> AllStudents { get; set; } = new();
+
         // Use ViewModel list (recommended) — avoids passing EF entities to the view
         public List<AttendanceRecordItemViewModel> Records { get; set; } = new();
+
     }
 }

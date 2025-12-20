@@ -100,24 +100,34 @@
                                     <td class="px-3 py-2 text-center text-sm">@((st?.FirstName) ?? "")</td>
                                     <td class="px-3 py-2 text-center text-sm">@((st?.LastName) ?? "")</td>
                                     <td class="px-3 py-2 text-center text-sm">@((st?.NationalCode) ?? "")</td>
-
                                     <td class="px-3 py-2 text-center text-sm">
                                         @{
-                                            // امن‌سازی: convert enum to int safely
-                                            var statusInt = 2;
-                                            try { statusInt = (int)r.Status; } catch { statusInt = 2; }
+                                            int? statusInt = null;
+                                            try
+                                            {
+                                                statusInt = (int)r.Status;
+                                            }
+                                            catch
+                                            {
+                                                statusInt = null;
+                                            }
 
+                                            var optNone = statusInt == null ? " selected" : "";
                                             var optPresent = statusInt == 1 ? " selected" : "";
                                             var optAbsent = statusInt == 2 ? " selected" : "";
-                                            var optExcused = statusInt == 4 ? " selected" : "";
                                             var optLate = statusInt == 3 ? " selected" : "";
+                                            var optExcused = statusInt == 4 ? " selected" : "";
 
-                                            var optionsHtml = "<option value=\"1\"" + optPresent + ">حاضر</option>"
+                                            var optionsHtml =
+                                            "<option value=\"\"" + optNone + ">— انتخاب نشده —</option>"
+                                            + "<option value=\"1\"" + optPresent + ">حاضر</option>"
                                             + "<option value=\"2\"" + optAbsent + ">غیبت غیرموجه</option>"
                                             + "<option value=\"4\"" + optExcused + ">غیبت موجه</option>"
                                             + "<option value=\"3\"" + optLate + ">تأخیر</option>";
                                         }
-                                        <select class="status-select px-2 py-1 border rounded text-sm" data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">
+                                        <select class="status-select px-2 py-1 border rounded text-sm"
+                                                data-record-id="@r.Id"
+                                                data-student-id="@(st?.Id ?? 0)">
                                             @Html.Raw(optionsHtml)
                                         </select>
                                     </td>
