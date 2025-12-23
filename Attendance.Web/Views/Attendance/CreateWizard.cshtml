@@ -76,13 +76,17 @@
             const toStep2Btn = document.getElementById('to-step-2');
             const toStep3Btn = document.getElementById('to-step-3');
             const backBtn = document.getElementById('back-to-step-1');
-            const studentsList = document.getElementById('students-list');
-            const selectedGradeSpan = document.getElementById('selected-grade');
+
+            const gradeTabsContainer = document.getElementById('grade-tabs');
+            const studentsContainer = document.getElementById('students-container');
+
+            const modeRadios = document.querySelectorAll('input[name="mode"]');
 
             /* ================== STATE ================== */
-            let selectedGrade = null;              // پایه انتخاب‌شده یا ALL
-            const allStudentsCache = {};           // cache per grade
-            const selectedStudentIds = new Set();  // ⭐ نگهداری وضعیت انتخاب‌ها
+            let mode = 'byGrade';              // byGrade | all
+            let selectedGrade = null;          // مقدار پایه
+            const selectedStudentIds = new Set();
+            const cache = {};                  // students cache
 
             /* ================== AntiForgery ================== */
             function getAntiForgeryToken() {
@@ -90,225 +94,170 @@
                 return el ? el.value : null;
             }
 
-            /* ================== Grade Tabs ================== */
-            document.querySelectorAll('.grade-tab').forEach(btn => {
-                btn.addEventListener('click', function () {
-
-                    document.querySelectorAll('.grade-tab').forEach(b => {
-                        b.classList.remove('bg-blue-600', 'text-white');
-                        b.classList.add('bg-slate-100', 'text-slate-700');
-                    });
-
-                    this.classList.add('bg-blue-600', 'text-white');
-                    this.classList.remove('bg-slate-100', 'text-slate-700');
-
-                    selectedGrade = this.dataset.grade;
+            /* ================== Mode Change ================== */
+            modeRadios.forEach(r => {
+                r.addEventListener('change', () => {
+                    mode = r.value;
+                    selectedGrade = null;
+                    gradeTabsContainer.innerHTML = '';
+                    studentsContainer.innerHTML = '';
+                    selectedStudentIds.clear();
                 });
             });
 
-            /* ================== Render Students ================== */
-            function renderStudents(list) {
-                studentsList.innerHTML = '';
+            /* ================== Load Grades ================== */
+            async function loadGrades() {
+                const res = await fetch('@Url.Action("GetGrades", "Attendance")', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) throw new Error();
+                return await res.json(); // ["ششم","هفتم",...]
+            }
 
-                list.forEach(s => {
+            /* ================== Load Students ================== */
+            async function loadStudentsByGrade(grade) {
+                if (cache[grade]) return cache[grade];
 
-                    const isChecked =
-                        selectedStudentIds.size === 0 || selectedStudentIds.has(s.id);
+                const url = '@Url.Action("GetStudentsByGrade", "Attendance")?grade=' + encodeURIComponent(grade);
+                const res = await fetch(url, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) throw new Error();
 
-                    const div = document.createElement('div');
-                    div.className = 'flex items-center gap-3 p-2 border rounded';
+                const data = await res.json();
+                cache[grade] = data;
+                return data;
+            }
 
-                    div.innerHTML = `
-                        <label class="flex items-center gap-3 w-full cursor-pointer">
-                            <input type="checkbox"
-                                   class="student-checkbox"
-                                   value="${s.id}"
-                                   ${isChecked ? 'checked' : ''} />
-                            <img src="${s.photo || '/uploads/students/default.png'}"
-                                 class="w-10 h-10 rounded object-cover" />
-                            <div class="flex-1">
-                                <div class="font-bold">${s.firstName || ''} ${s.lastName || ''}</div>
-                                <div class="text-xs text-slate-500">${s.nationalCode || ''}</div>
-                            </div>
-                        </label>
-                    `;
+            async function loadAllStudents() {
+                if (cache.ALL) return cache.ALL;
 
-                    const checkbox = div.querySelector('.student-checkbox');
+                const res = await fetch('@Url.Action("GetAllStudents", "Attendance")', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) throw new Error();
 
-                    checkbox.addEventListener('change', () => {
-                        const id = parseInt(checkbox.value, 10);
-                        if (checkbox.checked) {
-                            selectedStudentIds.add(id);
-                        } else {
-                            selectedStudentIds.delete(id);
-                        }
+                const data = await res.json();
+                cache.ALL = data;
+                return data;
+            }
+
+            /* ================== Render Tabs ================== */
+            function renderGradeTabs(grades) {
+                gradeTabsContainer.innerHTML = '';
+
+                grades.forEach(g => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.textContent = `پایه ${g}`;
+                    btn.className = 'px-3 py-1 rounded bg-slate-100 hover:bg-slate-200';
+
+                    btn.addEventListener('click', async () => {
+                        document.querySelectorAll('#grade-tabs button')
+                            .forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
+
+                        btn.classList.add('bg-blue-600', 'text-white');
+                        selectedGrade = g;
+
+                        const students = await loadStudentsByGrade(g);
+                        renderStudents(students);
                     });
 
-                    studentsList.appendChild(div);
+                    gradeTabsContainer.appendChild(btn);
+                });
+            }
+
+            /* ================== Render Students ================== */
+            function renderStudents(list) {
+                studentsContainer.innerHTML = '';
+
+                list.forEach(s => {
+                    const checked = selectedStudentIds.has(s.id);
+
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center gap-3 p-2 border rounded cursor-pointer';
+
+                    label.innerHTML = `
+                        <input type="checkbox" value="${s.id}" ${checked ? 'checked' : ''} />
+                        <img src="${s.photo || '/uploads/students/default.png'}"
+                             class="w-10 h-10 rounded object-cover" />
+                        <div>
+                            <div class="font-bold">${s.firstName} ${s.lastName}</div>
+                            <div class="text-xs text-slate-500">${s.nationalCode || ''}</div>
+                        </div>
+                    `;
+
+                    const cb = label.querySelector('input');
+                    cb.addEventListener('change', () => {
+                        const id = parseInt(cb.value, 10);
+                        cb.checked ? selectedStudentIds.add(id) : selectedStudentIds.delete(id);
+                    });
+
+                    studentsContainer.appendChild(label);
                 });
             }
 
             /* ================== Step 1 → Step 2 ================== */
-            toStep2Btn.addEventListener('click', async function () {
+            toStep2Btn.addEventListener('click', async () => {
 
-                if (!selectedGrade) {
-                    return Swal.fire({
-                        icon: 'warning',
-                        title: 'انتخاب الزامی است',
-                        text: 'لطفاً یکی از گزینه‌ها را انتخاب کنید'
-                    });
-                }
-
-                Swal.fire({
-                    title: 'در حال بارگذاری دانش‌آموزان...',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading()
-                });
+                Swal.fire({ title: 'در حال آماده‌سازی...', didOpen: () => Swal.showLoading() });
 
                 try {
-                    if (!allStudentsCache[selectedGrade]) {
-
-                        let url = '';
-                        if (selectedGrade === 'ALL') {
-                            url = '@Url.Action("GetAllStudents", "Attendance")';
-                            selectedGradeSpan.textContent = 'همه دانش‌آموزان';
-                        } else {
-                            const tpl = '@Url.Action("GetStudentsByGrade", "Attendance")?grade=__GRADE__';
-                            url = tpl.replace('__GRADE__', encodeURIComponent(selectedGrade));
-                            selectedGradeSpan.textContent = `پایه ${selectedGrade}`;
-                        }
-
-                        const res = await fetch(url, {
-                            method: 'GET',
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                            credentials: 'same-origin'
-                        });
-
-                        if (!res.ok) throw new Error();
-
-                        allStudentsCache[selectedGrade] = await res.json();
+                    if (mode === 'byGrade') {
+                        const grades = await loadGrades();
+                        renderGradeTabs(grades);
+                    } else {
+                        const students = await loadAllStudents();
+                        renderStudents(students);
                     }
-
-                    renderStudents(allStudentsCache[selectedGrade]);
 
                     step1.classList.add('hidden');
                     step2.classList.remove('hidden');
 
                 } catch {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'خطا',
-                        text: 'بارگذاری لیست دانش‌آموزان ناموفق بود'
-                    });
+                    Swal.fire('خطا', 'دریافت اطلاعات ناموفق بود', 'error');
                 } finally {
                     Swal.close();
                 }
             });
 
             /* ================== Back ================== */
-            backBtn.addEventListener('click', function () {
+            backBtn.addEventListener('click', () => {
                 step2.classList.add('hidden');
                 step1.classList.remove('hidden');
             });
 
-            /* ================== Step 2 → Create Session ================== */
-            toStep3Btn.addEventListener('click', async function () {
+            /* ================== Save ================== */
+            toStep3Btn.addEventListener('click', async () => {
 
-                const checkedIds = Array.from(selectedStudentIds);
-
-                if (!checkedIds.length) {
-                    return Swal.fire({
-                        icon: 'warning',
-                        title: 'هیچ دانش‌آموزی انتخاب نشده'
-                    });
+                if (!selectedStudentIds.size) {
+                    return Swal.fire('هشدار', 'هیچ دانش‌آموزی انتخاب نشده', 'warning');
                 }
 
-                const todayShamsi = (new Date()).toLocaleDateString('fa-IR-u-nu-latn');
-
-                const { value: form } = await Swal.fire({
-                    title: 'مشخصات جلسه',
-                    html:
-                        `<input id="sw-title" class="swal2-input" placeholder="نام جلسه">` +
-                        `<div class="flex gap-2">
-                            <input id="sw-time" type="time" class="swal2-input" style="width:50%">
-                            <input id="sw-loc" class="swal2-input" style="width:50%" placeholder="مکان (اختیاری)">
-                         </div>
-                         <div class="text-sm mt-1">تاریخ (شمسی): ${todayShamsi}</div>`,
-                    showCancelButton: true,
-                    focusConfirm: false,
-                    preConfirm: () => {
-                        const t = document.getElementById('sw-title').value.trim();
-                        if (!t) {
-                            Swal.showValidationMessage('نام جلسه الزامی است');
-                            return false;
-                        }
-                        return {
-                            title: t,
-                            startTime: document.getElementById('sw-time').value || null,
-                            location: document.getElementById('sw-loc').value || null
-                        };
-                    }
-                });
-
-                if (!form) return;
-
                 const fd = new FormData();
-                fd.append('title', form.title);
-                fd.append('dateShamsi', todayShamsi);
-                fd.append('grade', selectedGrade);
-                if (form.startTime) fd.append('startTime', form.startTime);
-                if (form.location) fd.append('location', form.location);
-
-                checkedIds.forEach(id => fd.append('studentIds', id));
+                selectedStudentIds.forEach(id => fd.append('studentIds', id));
 
                 const anti = getAntiForgeryToken();
                 if (anti) fd.append('__RequestVerificationToken', anti);
 
-                Swal.fire({
-                    title: 'در حال ایجاد جلسه...',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading()
-                });
+                Swal.fire({ title: 'در حال ثبت...', didOpen: () => Swal.showLoading() });
 
                 try {
-                    const resp = await fetch('@Url.Action("CreateSessionAjax", "Attendance")', {
+                    const res = await fetch('@Url.Action("SaveAttendance", "Attendance")', {
                         method: 'POST',
-                        credentials: 'same-origin',
-                        body: fd
+                        body: fd,
+                        credentials: 'same-origin'
                     });
 
-                    const text = await resp.text();
-                    let json = null;
-                    try { json = JSON.parse(text); } catch {}
+                    if (!res.ok) throw new Error();
 
-                    if (!resp.ok) {
-                        Swal.close();
-                        return Swal.fire({
-                            icon: 'error',
-                            title: 'خطا',
-                            text: json?.error || json?.message || 'ایجاد جلسه ناموفق بود'
-                        });
-                    }
+                    Swal.fire('موفق', 'حضور و غیاب ثبت شد', 'success');
 
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'موفق',
-                        text: json?.message || 'جلسه با موفقیت ایجاد شد'
-                    }).then(() => {
-                        if (json?.id) {
-                            window.location.href = `/Attendance/SessionDetails/${json.id}`;
-                        } else {
-                            window.location.reload();
-                        }
-                    });
-
-                } catch (e) {
-                    console.error(e);
-                    Swal.fire({ icon: 'error', title: 'خطای غیرمنتظره' });
+                } catch {
+                    Swal.fire('خطا', 'ثبت اطلاعات ناموفق بود', 'error');
                 }
             });
 
         })();
     </script>
-
 }

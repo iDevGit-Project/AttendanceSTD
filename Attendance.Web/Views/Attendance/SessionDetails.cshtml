@@ -171,40 +171,57 @@
                 return el ? el.value : null;
             }
 
-            function collectRecords() {
-                const rows = Array.from(document.querySelectorAll('tbody tr[data-record-id]'));
-                const records = [];
+           function collectRecords() {
+            const rows = Array.from(document.querySelectorAll('tbody tr[data-record-id]'));
+            const records = [];
 
-                rows.forEach(row => {
-                    const recordId = parseInt(row.getAttribute('data-record-id'), 10) || null;
-                    const studentId = parseInt(row.getAttribute('data-student-id'), 10) || null;
-                    if (!studentId) return; // skip invalid
+            rows.forEach(row => {
+                const recordIdAttr = row.getAttribute('data-record-id');
+                const studentIdAttr = row.getAttribute('data-student-id');
 
-                    const statusSel = row.querySelector('select.status-select');
-                    const status = statusSel ? parseInt(statusSel.value, 10) : 2;
+                const recordId = recordIdAttr && !isNaN(recordIdAttr)
+                    ? parseInt(recordIdAttr, 10)
+                    : null;
 
-                    const noteEl = row.querySelector('.attendance-note');
-                    const note = noteEl ? (noteEl.value || "").trim() : null;
+                const studentId = studentIdAttr && !isNaN(studentIdAttr)
+                    ? parseInt(studentIdAttr, 10)
+                    : null;
 
-                    const lateEl = row.querySelector('.late-minutes');
-                    let lateMinutes = null;
-                    if (lateEl && lateEl.value) {
-                        const v = parseInt(lateEl.value, 10);
-                        if (!isNaN(v)) lateMinutes = v;
-                    }
+                if (!studentId) return;
 
-                    records.push({
-                        recordId: recordId,
-                        studentId: studentId,
-                        status: status,
-                        note: note,
-                        lateMinutes: lateMinutes
-                    });
+                /* ---------- STATUS (اصلاح‌شده) ---------- */
+                const statusSel = row.querySelector('select.status-select');
+                let status = null;
+                if (statusSel && statusSel.value !== '') {
+                    const v = parseInt(statusSel.value, 10);
+                    if (!isNaN(v)) status = v;
+                }
+
+                /* ---------- NOTE ---------- */
+                const noteEl = row.querySelector('.attendance-note');
+                const note = noteEl ? noteEl.value.trim() : null;
+
+                /* ---------- LATE MINUTES ---------- */
+                const lateEl = row.querySelector('.late-minutes');
+                let lateMinutes = null;
+                if (lateEl && lateEl.value !== '') {
+                    const v = parseInt(lateEl.value, 10);
+                    if (!isNaN(v)) lateMinutes = v;
+                }
+
+                records.push({
+                    recordId: recordId,
+                    studentId: studentId,
+                    status: status,          // null یا enum معتبر
+                    note: note || null,
+                    lateMinutes: lateMinutes
                 });
+            });
 
-                console.log('Collected records for SaveAttendance:', records.length, records);
-                return records;
-            }
+            console.log('Collected records for SaveAttendance:', records.length, records);
+            return records;
+        }
+
 
             saveBtn.addEventListener('click', async function (e) {
                 e.preventDefault();
@@ -272,7 +289,6 @@
         })();
     </script>
     <script>
-        // Archive/unarchive AJAX (put inside existing SessionDetailsScripts)
         (function(){
             function getAntiForgeryToken() {
                 const el = document.querySelector('input[name="__RequestVerificationToken"]');
