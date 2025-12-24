@@ -238,7 +238,8 @@
                 const fd = new FormData();
                 fd.append('__RequestVerificationToken', token);
                 fd.append('sessionId', String(sessionId));
-                records.forEach(r => fd.append('records[]', JSON.stringify(r)));
+                fd.append('records', JSON.stringify(records));
+                //records.forEach(r => fd.append('records[]', JSON.stringify(r)));
 
                 Swal.fire({ title: 'در حال ذخیره...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
                 try {

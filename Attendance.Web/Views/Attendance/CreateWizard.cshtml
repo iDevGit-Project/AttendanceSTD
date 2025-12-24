@@ -84,9 +84,9 @@
 
             /* ================== STATE ================== */
             let mode = 'byGrade';              // byGrade | all
-            let selectedGrade = null;          // مقدار پایه
+            let selectedGrade = null;
             const selectedStudentIds = new Set();
-            const cache = {};                  // students cache
+            const cache = {};
 
             /* ================== AntiForgery ================== */
             function getAntiForgeryToken() {
@@ -111,15 +111,14 @@
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (!res.ok) throw new Error();
-                return await res.json(); // ["ششم","هفتم",...]
+                return await res.json();
             }
 
             /* ================== Load Students ================== */
             async function loadStudentsByGrade(grade) {
                 if (cache[grade]) return cache[grade];
 
-                const url = '@Url.Action("GetStudentsByGrade", "Attendance")?grade=' + encodeURIComponent(grade);
-                const res = await fetch(url, {
+                const res = await fetch('@Url.Action("GetStudentsByGrade", "Attendance")?grade=' + encodeURIComponent(grade), {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (!res.ok) throw new Error();
@@ -227,36 +226,101 @@
                 step1.classList.remove('hidden');
             });
 
+            /* ================== Swal: Session Meta ================== */
+            async function askSessionMeta() {
+                const result = await Swal.fire({
+                    title: 'اطلاعات جلسه',
+                    html: `
+                        <div class="text-right space-y-3">
+                            <div>
+                                <label class="block text-sm mb-1">مکان برگزاری</label>
+                                <input id="swal-location" class="swal2-input" placeholder="مثلاً کلاس ۱۰۱">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1">ساعت شروع جلسه</label>
+                                <input id="swal-start-time" type="time" step="300" class="swal2-input">
+                            </div>
+                        </div>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: 'تأیید',
+                    cancelButtonText: 'انصراف',
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        const location = document.getElementById('swal-location').value.trim();
+                        const startTime = document.getElementById('swal-start-time').value;
+
+                        if (!location)
+                            Swal.showValidationMessage('مکان برگزاری را وارد کنید');
+
+                        if (!startTime)
+                            Swal.showValidationMessage('ساعت شروع جلسه را انتخاب کنید');
+
+                        return { location, startTime };
+                    }
+                });
+
+                return result.isConfirmed ? result.value : null;
+            }
+
             /* ================== Save ================== */
-            toStep3Btn.addEventListener('click', async () => {
+        toStep3Btn.addEventListener('click', async () => {
 
-                if (!selectedStudentIds.size) {
-                    return Swal.fire('هشدار', 'هیچ دانش‌آموزی انتخاب نشده', 'warning');
-                }
+            if (!selectedStudentIds.size) {
+                return Swal.fire('هشدار', 'هیچ دانش‌آموزی انتخاب نشده', 'warning');
+            }
 
-                const fd = new FormData();
-                selectedStudentIds.forEach(id => fd.append('studentIds', id));
+            const sessionIdInput = document.querySelector('input[name="sessionId"]');
+            const sessionId = sessionIdInput ? Number(sessionIdInput.value) : 0;
 
-                const anti = getAntiForgeryToken();
-                if (anti) fd.append('__RequestVerificationToken', anti);
+            if (!sessionId) {
+                return Swal.fire('خطا', 'شناسه جلسه نامعتبر است', 'error');
+            }
 
-                Swal.fire({ title: 'در حال ثبت...', didOpen: () => Swal.showLoading() });
+            const sessionMeta = await askSessionMeta();
+            if (!sessionMeta) return;
 
-                try {
-                    const res = await fetch('@Url.Action("SaveAttendance", "Attendance")', {
-                        method: 'POST',
-                        body: fd,
-                        credentials: 'same-origin'
-                    });
+            const fd = new FormData();
+            fd.append('sessionId', sessionId);
 
-                    if (!res.ok) throw new Error();
-
-                    Swal.fire('موفق', 'حضور و غیاب ثبت شد', 'success');
-
-                } catch {
-                    Swal.fire('خطا', 'ثبت اطلاعات ناموفق بود', 'error');
-                }
+            // 🔴 تطبیق کامل با SaveAttendance
+            selectedStudentIds.forEach(id => {
+                fd.append('records[]', JSON.stringify({
+                    studentId: id,
+                    status: null,
+                    lateMinutes: null,
+                    note: null
+                }));
             });
+
+            const anti = getAntiForgeryToken();
+            if (anti) fd.append('__RequestVerificationToken', anti);
+
+            Swal.fire({ title: 'در حال ثبت...', didOpen: () => Swal.showLoading() });
+
+            try {
+                const res = await fetch('@Url.Action("SaveAttendance", "Attendance")', {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'same-origin'
+                });
+
+                const text = await res.text();
+                let parsed = null;
+                try { parsed = JSON.parse(text); } catch { }
+
+                if (!res.ok) {
+                    console.error('SaveAttendance error:', res.status, parsed || text);
+                    throw new Error();
+                }
+
+                Swal.fire('موفق', 'جلسه با موفقیت ایجاد شد', 'success');
+
+            } catch {
+                Swal.fire('خطا', 'ثبت اطلاعات ناموفق بود', 'error');
+            }
+        });
+
 
         })();
     </script>
