@@ -69,7 +69,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         (function () {
-
             /* ================== DOM ================== */
             const step1 = document.getElementById('step-1');
             const step2 = document.getElementById('step-2');
@@ -79,11 +78,10 @@
 
             const gradeTabsContainer = document.getElementById('grade-tabs');
             const studentsContainer = document.getElementById('students-container');
-
             const modeRadios = document.querySelectorAll('input[name="mode"]');
 
             /* ================== STATE ================== */
-            let mode = 'byGrade';              // byGrade | all
+            let mode = 'byGrade';
             let selectedGrade = null;
             const selectedStudentIds = new Set();
             const cache = {};
@@ -107,9 +105,7 @@
 
             /* ================== Load Grades ================== */
             async function loadGrades() {
-                const res = await fetch('@Url.Action("GetGrades", "Attendance")', {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
+                const res = await fetch('@Url.Action("GetGrades", "Attendance")');
                 if (!res.ok) throw new Error();
                 return await res.json();
             }
@@ -117,51 +113,31 @@
             /* ================== Load Students ================== */
             async function loadStudentsByGrade(grade) {
                 if (cache[grade]) return cache[grade];
-
-                const res = await fetch('@Url.Action("GetStudentsByGrade", "Attendance")?grade=' + encodeURIComponent(grade), {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
+                const res = await fetch('@Url.Action("GetStudentsByGrade", "Attendance")?grade=' + encodeURIComponent(grade));
                 if (!res.ok) throw new Error();
-
-                const data = await res.json();
-                cache[grade] = data;
-                return data;
+                return cache[grade] = await res.json();
             }
 
             async function loadAllStudents() {
                 if (cache.ALL) return cache.ALL;
-
-                const res = await fetch('@Url.Action("GetAllStudents", "Attendance")', {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
+                const res = await fetch('@Url.Action("GetAllStudents", "Attendance")');
                 if (!res.ok) throw new Error();
-
-                const data = await res.json();
-                cache.ALL = data;
-                return data;
+                return cache.ALL = await res.json();
             }
 
             /* ================== Render Tabs ================== */
             function renderGradeTabs(grades) {
                 gradeTabsContainer.innerHTML = '';
-
                 grades.forEach(g => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.textContent = `پایه ${g}`;
                     btn.className = 'px-3 py-1 rounded bg-slate-100 hover:bg-slate-200';
-
-                    btn.addEventListener('click', async () => {
-                        document.querySelectorAll('#grade-tabs button')
-                            .forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
-
-                        btn.classList.add('bg-blue-600', 'text-white');
+                    btn.onclick = async () => {
                         selectedGrade = g;
-
                         const students = await loadStudentsByGrade(g);
                         renderStudents(students);
-                    });
-
+                    };
                     gradeTabsContainer.appendChild(btn);
                 });
             }
@@ -169,159 +145,93 @@
             /* ================== Render Students ================== */
             function renderStudents(list) {
                 studentsContainer.innerHTML = '';
-
                 list.forEach(s => {
-                    const checked = selectedStudentIds.has(s.id);
-
                     const label = document.createElement('label');
                     label.className = 'flex items-center gap-3 p-2 border rounded cursor-pointer';
-
                     label.innerHTML = `
-                        <input type="checkbox" value="${s.id}" ${checked ? 'checked' : ''} />
-                        <img src="${s.photo || '/uploads/students/default.png'}"
-                             class="w-10 h-10 rounded object-cover" />
+                        <input type="checkbox" value="${s.id}">
+                        <img src="${s.photo || '/uploads/students/default.png'}" class="w-10 h-10 rounded object-cover">
                         <div>
                             <div class="font-bold">${s.firstName} ${s.lastName}</div>
                             <div class="text-xs text-slate-500">${s.nationalCode || ''}</div>
                         </div>
                     `;
-
-                    const cb = label.querySelector('input');
-                    cb.addEventListener('change', () => {
-                        const id = parseInt(cb.value, 10);
-                        cb.checked ? selectedStudentIds.add(id) : selectedStudentIds.delete(id);
-                    });
-
+                    label.querySelector('input').onchange = e => {
+                        const id = Number(e.target.value);
+                        e.target.checked ? selectedStudentIds.add(id) : selectedStudentIds.delete(id);
+                    };
                     studentsContainer.appendChild(label);
                 });
             }
 
             /* ================== Step 1 → Step 2 ================== */
-            toStep2Btn.addEventListener('click', async () => {
-
-                Swal.fire({ title: 'در حال آماده‌سازی...', didOpen: () => Swal.showLoading() });
-
+            toStep2Btn.onclick = async () => {
+                Swal.showLoading();
                 try {
-                    if (mode === 'byGrade') {
-                        const grades = await loadGrades();
-                        renderGradeTabs(grades);
-                    } else {
-                        const students = await loadAllStudents();
-                        renderStudents(students);
-                    }
-
+                    if (mode === 'byGrade') renderGradeTabs(await loadGrades());
+                    else renderStudents(await loadAllStudents());
                     step1.classList.add('hidden');
                     step2.classList.remove('hidden');
-
                 } catch {
                     Swal.fire('خطا', 'دریافت اطلاعات ناموفق بود', 'error');
-                } finally {
-                    Swal.close();
                 }
-            });
+                Swal.close();
+            };
 
-            /* ================== Back ================== */
-            backBtn.addEventListener('click', () => {
+            backBtn.onclick = () => {
                 step2.classList.add('hidden');
                 step1.classList.remove('hidden');
-            });
+            };
 
-            /* ================== Swal: Session Meta ================== */
+            /* ================== Swal Meta ================== */
             async function askSessionMeta() {
-                const result = await Swal.fire({
+                const r = await Swal.fire({
                     title: 'اطلاعات جلسه',
                     html: `
-                        <div class="text-right space-y-3">
-                            <div>
-                                <label class="block text-sm mb-1">مکان برگزاری</label>
-                                <input id="swal-location" class="swal2-input" placeholder="مثلاً کلاس ۱۰۱">
-                            </div>
-                            <div>
-                                <label class="block text-sm mb-1">ساعت شروع جلسه</label>
-                                <input id="swal-start-time" type="time" step="300" class="swal2-input">
-                            </div>
-                        </div>
+                        <input id="loc" class="swal2-input" placeholder="مکان">
+                        <input id="time" type="time" class="swal2-input">
                     `,
-                    showCancelButton: true,
-                    confirmButtonText: 'تأیید',
-                    cancelButtonText: 'انصراف',
-                    focusConfirm: false,
-                    preConfirm: () => {
-                        const location = document.getElementById('swal-location').value.trim();
-                        const startTime = document.getElementById('swal-start-time').value;
-
-                        if (!location)
-                            Swal.showValidationMessage('مکان برگزاری را وارد کنید');
-
-                        if (!startTime)
-                            Swal.showValidationMessage('ساعت شروع جلسه را انتخاب کنید');
-
-                        return { location, startTime };
-                    }
+                    preConfirm: () => ({
+                        location: document.getElementById('loc').value,
+                        startTime: document.getElementById('time').value
+                    }),
+                    showCancelButton: true
                 });
-
-                return result.isConfirmed ? result.value : null;
+                return r.isConfirmed ? r.value : null;
             }
 
-            /* ================== Save ================== */
-        toStep3Btn.addEventListener('click', async () => {
+            /* ================== FINAL SAVE ================== */
+            toStep3Btn.onclick = async () => {
+                if (!selectedStudentIds.size)
+                    return Swal.fire('هشدار', 'دانش‌آموزی انتخاب نشده', 'warning');
 
-            if (!selectedStudentIds.size) {
-                return Swal.fire('هشدار', 'هیچ دانش‌آموزی انتخاب نشده', 'warning');
-            }
+                const meta = await askSessionMeta();
+                if (!meta) return;
 
-            const sessionIdInput = document.querySelector('input[name="sessionId"]');
-            const sessionId = sessionIdInput ? Number(sessionIdInput.value) : 0;
+                const fd = new FormData();
+                fd.append('__RequestVerificationToken', getAntiForgeryToken());
+                fd.append('title', 'جلسه حضور و غیاب');
+                fd.append('dateShamsi', '1403/01/01');
+                fd.append('grade', mode === 'byGrade' ? selectedGrade : 'ALL');
+                fd.append('location', meta.location);
+                fd.append('startTime', meta.startTime);
 
-            if (!sessionId) {
-                return Swal.fire('خطا', 'شناسه جلسه نامعتبر است', 'error');
-            }
+                selectedStudentIds.forEach(id => fd.append('studentIds', id));
 
-            const sessionMeta = await askSessionMeta();
-            if (!sessionMeta) return;
+                Swal.showLoading();
 
-            const fd = new FormData();
-            fd.append('sessionId', sessionId);
-
-            // 🔴 تطبیق کامل با SaveAttendance
-            selectedStudentIds.forEach(id => {
-                fd.append('records[]', JSON.stringify({
-                    studentId: id,
-                    status: null,
-                    lateMinutes: null,
-                    note: null
-                }));
-            });
-
-            const anti = getAntiForgeryToken();
-            if (anti) fd.append('__RequestVerificationToken', anti);
-
-            Swal.fire({ title: 'در حال ثبت...', didOpen: () => Swal.showLoading() });
-
-            try {
-                const res = await fetch('@Url.Action("SaveAttendance", "Attendance")', {
+                const res = await fetch('@Url.Action("CreateSessionAjax", "Attendance")', {
                     method: 'POST',
-                    body: fd,
-                    credentials: 'same-origin'
+                    body: fd
                 });
 
-                const text = await res.text();
-                let parsed = null;
-                try { parsed = JSON.parse(text); } catch { }
+                const data = await res.json();
+                if (!res.ok) return Swal.fire('خطا', data.error || 'ناموفق', 'error');
 
-                if (!res.ok) {
-                    console.error('SaveAttendance error:', res.status, parsed || text);
-                    throw new Error();
-                }
-
-                Swal.fire('موفق', 'جلسه با موفقیت ایجاد شد', 'success');
-
-            } catch {
-                Swal.fire('خطا', 'ثبت اطلاعات ناموفق بود', 'error');
-            }
-        });
-
-
+                Swal.fire('موفق', 'جلسه ایجاد شد', 'success')
+                    .then(() => location.href = `/Attendance/SessionDetails/${data.id}`);
+            };
         })();
     </script>
+
 }
