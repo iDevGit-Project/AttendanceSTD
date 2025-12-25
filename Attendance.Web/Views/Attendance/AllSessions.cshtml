@@ -13,14 +13,12 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <a asp-action="Index" asp-controller="Attendance" class="px-3 py-2 bg-slate-100 rounded hover:bg-slate-200">پیشخوان جلسات</a>
-            <a asp-action="CreateWizard" asp-controller="Attendance" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">ایجاد جلسه جدید</a>
+            <a asp-action="CreateWizard" asp-controller="Attendance" class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">ایجاد جلسه جدید</a>
         </div>
     </div>
 
     <!-- جستجو و pageSize مشابه Index دانش‌آموزان -->
     <form method="get" class="mb-4 flex gap-2 items-center">
-        <input type="hidden" name="pageSize" value="@Model.PageSize" />
         <input
             name="search"
             value="@(WebUtility.HtmlDecode(Model?.Search ?? ""))"
@@ -40,13 +38,13 @@
         </div>
     </form>
 
-    <div class="overflow-x-auto">
+    <div class="bg-slate-100/20 border rounded">
         <table class="min-w-full divide-y divide-slate-100">
-            <thead class="bg-blue-50">
+            <thead class="bg-blue-100/20">
                 <tr>
                     @* <th class="px-3 py-2 text-center text-sm">شناسه</th> *@
-                    <th class="px-3 py-2 text-right text-sm">عنوان</th>
-                    <th class="px-3 py-2 text-center text-sm">تاریخ (شمسی)</th>
+                    <th class="px-3 py-2 text-right text-sm">عنوان جلسه</th>
+                    <th class="px-3 py-2 text-center text-sm">تاریخ جلسه</th>
                     <th class="px-3 py-2 text-center text-sm">مدرسه</th>
                     <th class="px-3 py-2 text-center text-sm">تعداد افراد</th>
                     <th class="px-3 py-2 text-center text-sm">وضعیت جلسه</th>
@@ -146,21 +144,34 @@
             </tbody>
         </table>
     </div>
+    <!-- Pagination (unchanged) -->
+    <div class="mt-4 flex items-center justify-between gap-2">
+        <div class="text-sm font-bold text-slate-800">
+            شماره صفحه : <span class="font-bold">@Model.Page</span> از <span class="font-bold">@Model.TotalPages</span>
+        </div>
 
-    <!-- pagination مشابه Index دانش‌آموزان -->
-    <div class="mt-4 flex items-center justify-between">
-        <div class="text-sm text-slate-600">نمایش @Model.Sessions.Count() از @Model.Total جلسه</div>
+        <div class="inline-flex items-center">
+            <nav class="inline-flex items-center rounded-md gap-2" role="navigation" aria-label="Pagination">
+                <a asp-action="AllSessions"
+                   asp-route-page="@(Model.Page - 1)"
+                   asp-route-pageSize="@Model.PageSize"
+                   asp-route-search="@Model.Search"
+                   class="px-2 py-1 font-bold border text-sm gap-2 rounded @(Model.Page <= 1 ? "opacity-50 pointer-events-none bg-slate-100" : "bg-white hover:bg-slate-50")">
+                    قبلی
+                </a>
 
-        <div class="flex items-center gap-2">
-            @{
-                var prev = Model.Page > 1 ? Model.Page - 1 : 1;
-                var next = Model.Page < Model.TotalPages ? Model.Page + 1 : Model.TotalPages;
-            }
-            <a asp-action="AllSessions" asp-route-page="1" asp-route-pageSize="@Model.PageSize" asp-route-search="@Model.Search" class="px-2 py-1 border rounded hover:bg-slate-50">« اول</a>
-            <a asp-action="AllSessions" asp-route-page="@prev" asp-route-pageSize="@Model.PageSize" asp-route-search="@Model.Search" class="px-2 py-1 border rounded hover:bg-slate-50">‹ قبلی</a>
-            <span class="px-2 py-1 text-sm">صفحه @Model.Page از @Model.TotalPages</span>
-            <a asp-action="AllSessions" asp-route-page="@next" asp-route-pageSize="@Model.PageSize" asp-route-search="@Model.Search" class="px-2 py-1 border rounded hover:bg-slate-50">بعدی ›</a>
-            <a asp-action="AllSessions" asp-route-page="@Model.TotalPages" asp-route-pageSize="@Model.PageSize" asp-route-search="@Model.Search" class="px-2 py-1 border rounded hover:bg-slate-50">آخر »</a>
+                <span class="px-3 py-1 font-bold rounded-md bg-blue-800 text-sm gap-2 text-slate-100">
+                    @Model.Page
+                </span>
+
+                <a asp-action="AllSessions"
+                   asp-route-page="@(Model.Page + 1)"
+                   asp-route-pageSize="@Model.PageSize"
+                   asp-route-search="@Model.Search"
+                   class="px-2 py-1 font-bold border rounded-md text-sm gap-2 rounded @(Model.Page >= Model.TotalPages ? "opacity-50 pointer-events-none bg-slate-100" : "bg-white hover:bg-slate-50")">
+                    بعدی
+                </a>
+            </nav>
         </div>
     </div>
 </div>
@@ -169,56 +180,13 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const pageSizeSelector = document.getElementById("pageSizeSelector");
-            const tableBody = document.getElementById("allsessions-table-body");
-            const loading = document.getElementById("loadingIndicator");
-
             if (!pageSizeSelector) return;
 
-            pageSizeSelector.addEventListener("change", async function () {
+            pageSizeSelector.addEventListener("change", function () {
                 const pageSize = this.value;
-                const currentPage = @Model.Page;
                 const search = '@Model.Search';
-                const url = `@Url.Action("AllSessions", "Attendance")?page=${currentPage}&pageSize=${pageSize}&search=${search}`;
-
-                try {
-                    if (loading) loading.classList.remove("hidden");
-
-                    const response = await fetch(url, {
-                        headers: { "X-Requested-With": "XMLHttpRequest" }
-                    });
-
-                    if (!response.ok) {
-                        console.error("خطا در دریافت داده‌ها", response.status);
-                        return;
-                    }
-
-                    const html = await response.text();
-
-                    // استخراج tbody جدید از HTML دریافت‌شده
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, "text/html");
-
-                    // جایگزینی بخش‌های جدول و آمار
-                    const newTableBody = doc.querySelector("#allsessions-table-body");
-                    const newStats = doc.querySelectorAll(".grid > div"); // کارت‌های آمار
-
-                    if (newTableBody && tableBody) {
-                        tableBody.innerHTML = newTableBody.innerHTML;
-                    }
-
-                    // آمار را جایگزین کن (اختیاری)
-                    const statCards = document.querySelectorAll(".grid > div");
-                    if (newStats.length === statCards.length) {
-                        newStats.forEach((card, i) => {
-                            statCards[i].innerHTML = card.innerHTML;
-                        });
-                    }
-
-                } catch (err) {
-                    console.error("AJAX Error:", err);
-                } finally {
-                    if (loading) loading.classList.add("hidden");
-                }
+                const url = `@Url.Action("AllSessions", "Attendance")?page=1&pageSize=${pageSize}&search=${encodeURIComponent(search ?? '')}`;
+                window.location.href = url;
             });
         });
     </script>

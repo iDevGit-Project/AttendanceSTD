@@ -101,11 +101,11 @@ namespace Attendance.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> AllSessions(int page = 1, int pageSize = 20, string? search = null)
+        public async Task<IActionResult> AllSessions(int page = 1, int pageSize = 5, string? search = null)
         {
             if (page < 1) page = 1;
-            var allowed = new[] { 10, 20, 50, 100 };
-            if (!allowed.Contains(pageSize)) pageSize = 20;
+            var allowed = new[] { 5, 10, 25, 50 };
+            if (!allowed.Contains(pageSize)) pageSize = 5;
 
             var query = _db.AttendanceSessions.AsNoTracking();
 

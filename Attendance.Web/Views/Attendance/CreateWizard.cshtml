@@ -143,26 +143,41 @@
             }
 
             /* ================== Render Students ================== */
-            function renderStudents(list) {
-                studentsContainer.innerHTML = '';
-                list.forEach(s => {
-                    const label = document.createElement('label');
-                    label.className = 'flex items-center gap-3 p-2 border rounded cursor-pointer';
-                    label.innerHTML = `
-                        <input type="checkbox" value="${s.id}">
-                        <img src="${s.photo || '/uploads/students/default.png'}" class="w-10 h-10 rounded object-cover">
-                        <div>
-                            <div class="font-bold">${s.firstName} ${s.lastName}</div>
-                            <div class="text-xs text-slate-500">${s.nationalCode || ''}</div>
-                        </div>
-                    `;
-                    label.querySelector('input').onchange = e => {
-                        const id = Number(e.target.value);
-                        e.target.checked ? selectedStudentIds.add(id) : selectedStudentIds.delete(id);
-                    };
-                    studentsContainer.appendChild(label);
-                });
-            }
+                function renderStudents(list) {
+                    studentsContainer.innerHTML = '';
+
+                    list.forEach(s => {
+                        const studentId = Number(s.id); // 🔴 اجبار به number
+
+                        const checked = selectedStudentIds.has(studentId);
+
+                        const label = document.createElement('label');
+                        label.className = 'flex items-center gap-3 p-2 border rounded cursor-pointer';
+
+                        label.innerHTML = `
+                            <input type="checkbox" value="${studentId}" ${checked ? 'checked' : ''} />
+                            <img src="${s.photo || '/uploads/students/default.png'}"
+                                 class="w-10 h-10 rounded object-cover" />
+                            <div>
+                                <div class="font-bold">${s.firstName} ${s.lastName}</div>
+                                <div class="text-xs text-slate-500">${s.nationalCode || ''}</div>
+                            </div>
+                        `;
+
+                        const cb = label.querySelector('input');
+
+                        cb.addEventListener('change', () => {
+                            const id = Number(cb.value);
+                            if (cb.checked) {
+                                selectedStudentIds.add(id);
+                            } else {
+                                selectedStudentIds.delete(id);
+                            }
+                        });
+
+                        studentsContainer.appendChild(label);
+                    });
+                }
 
             /* ================== Step 1 → Step 2 ================== */
             toStep2Btn.onclick = async () => {
@@ -208,10 +223,20 @@
                 const meta = await askSessionMeta();
                 if (!meta) return;
 
+                function getTodayShamsi() {
+                    const today = new Date();
+                    return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    }).format(today).replace(/\/+/g, '/');
+                }
+
+                // ...
                 const fd = new FormData();
                 fd.append('__RequestVerificationToken', getAntiForgeryToken());
                 fd.append('title', 'جلسه حضور و غیاب');
-                fd.append('dateShamsi', '1403/01/01');
+                fd.append('dateShamsi', getTodayShamsi());
                 fd.append('grade', mode === 'byGrade' ? selectedGrade : 'ALL');
                 fd.append('location', meta.location);
                 fd.append('startTime', meta.startTime);
