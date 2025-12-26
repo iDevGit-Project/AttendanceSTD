@@ -77,12 +77,12 @@
                     <thead class="bg-blue-50">
                         <tr>
                             <th class="px-3 py-2 text-right text-sm">تصویر</th>
-                            <th class="px-3 py-2 text-center text-sm">نام</th>
-                            <th class="px-3 py-2 text-center text-sm">نام خانوادگی</th>
-                            <th class="px-3 py-2 text-center text-sm">کد ملی</th>
-                            <th class="px-3 py-2 text-center text-sm">عملیات حضور</th>
+                            <th class="px-3 py-2 text-center text-sm"> نام و نام خانوادگی</th>
+                            <th class="px-3 py-2 text-center text-sm">پایه تحصیلی</th>
+                            <th class="px-3 py-2 text-center text-sm">نام مدرسه</th>
+                            <th class="px-3 py-2 text-center text-sm">وضعیت حضور</th>
                             <th class="px-3 py-2 text-center text-sm">یادداشت</th>
-                            <th class="px-3 py-2 text-center text-sm">دقایق تأخیر</th>
+                            <th class="px-3 py-2 text-center text-sm">توضیحات</th>
                         </tr>
                     </thead>
                     <tbody id="session-details-table-body" class="bg-white divide-y divide-slate-100">
@@ -101,10 +101,9 @@
                                     <td class="px-3 py-2 text-right">
                                         <img src="@(st?.PhotoPath ?? "/uploads/students/default.png")" class="h-10 w-10 object-cover rounded" alt="photo" />
                                     </td>
-
-                                    <td class="px-3 py-2 text-center text-sm">@((st?.FirstName) ?? "")</td>
-                                    <td class="px-3 py-2 text-center text-sm">@((st?.LastName) ?? "")</td>
-                                    <td class="px-3 py-2 text-center text-sm">@((st?.NationalCode) ?? "")</td>
+                                    <td class="px-3 py-2 text-center text-sm">@((st?.FirstName + " "+ st?.LastName) ?? "")</td>
+                                    <td class="px-3 py-2 text-center text-sm">@((st?.Grade) ?? "")</td>
+                                    <td class="px-3 py-2 text-center text-sm">@((st?.SchoolName) ?? "")</td>
                                     <td class="px-3 py-2 text-center text-sm">
                                         @{
                                             int? statusInt = null;

@@ -11,37 +11,28 @@
                 confirmButtonText: 'قبول و بازگشت'
             }, options));
         } else {
-            alert(title + "\n" + (typeof html === 'string' ? html.replace(/<\/?[^>]+(>|$)/g, "") : String(html)));
+            alert(title + "\n" + html);
             return Promise.resolve();
         }
     }
 
     function extractRealStatus(cell) {
-        // 1️⃣ select (dropdown)
         const select = cell.querySelector('select');
         if (select && select.selectedIndex >= 0) {
             return select.options[select.selectedIndex].text.trim();
         }
 
-        // 2️⃣ radio buttons
         const checkedRadio = cell.querySelector('input[type="radio"]:checked');
         if (checkedRadio) {
             const lbl = cell.querySelector(`label[for="${checkedRadio.id}"]`);
             return lbl ? lbl.innerText.trim() : checkedRadio.value;
         }
 
-        // 3️⃣ data-status attribute
-        if (cell.dataset && cell.dataset.status) {
-            return cell.dataset.status.trim();
-        }
+        if (cell.dataset?.status) return cell.dataset.status.trim();
 
-        // 4️⃣ span / badge
         const span = cell.querySelector('span');
-        if (span) {
-            return span.innerText.trim();
-        }
+        if (span) return span.innerText.trim();
 
-        // 5️⃣ fallback
         return cell.innerText.trim();
     }
 
@@ -52,17 +43,10 @@
         td.style.fontWeight = '600';
         td.innerText = text;
 
-        // رنگ‌بندی وضعیت
         const lower = text.toLowerCase();
-        if (lower.includes('حاضر')) {
-            td.style.color = '#008000';
-        } else if (lower.includes('غایب')) {
-            td.style.color = '#FF0000';
-        } else if (lower.includes('تأخیر')) {
-            td.style.color = '#FFA500';
-        } else {
-            td.style.color = '#000';
-        }
+        if (lower.includes('حاضر')) td.style.color = '#008000';
+        else if (lower.includes('غایب')) td.style.color = '#ff0000';
+        else if (lower.includes('تأخیر')) td.style.color = '#ffa500';
 
         return td;
     }
@@ -73,172 +57,125 @@
                 title: 'در حال آماده‌سازی گزارش...',
                 allowOutsideClick: false,
                 showConfirmButton: false,
-                didOpen: () => { Swal.showLoading(); }
+                didOpen: () => Swal.showLoading()
             });
         }
 
         try {
             const tbody = document.getElementById('session-details-table-body');
             if (!tbody) {
-                await showSwalFallback('error', 'خطا!', 'جدول دانش‌آموزان پیدا نشد.');
+                Swal.close();
+                await showSwalFallback('error', 'خطا!', 'جدول پیدا نشد');
                 return;
             }
 
-            const dataRows = Array.from(tbody.rows || []).filter(r => !r.querySelector('td[colspan]'));
-            if (!dataRows.length) {
-                await showSwalFallback('warning', 'هشدار!', 'هیچ داده‌ای برای چاپ وجود ندارد.');
+            const rows = Array.from(tbody.rows).filter(r => !r.querySelector('[colspan]'));
+            if (!rows.length) {
+                Swal.close();
+                await showSwalFallback('warning', 'هشدار!', 'داده‌ای برای چاپ وجود ندارد');
                 return;
             }
 
-            const table = tbody.closest('table');
-            if (!table) {
-                await showSwalFallback('error', 'خطا!', 'ساختار جدول معتبر نیست.');
-                return;
-            }
+            // 🔴🔴🔴 نقطه کلیدی رفع باگ 🔴🔴🔴
+            Swal.close();
+            await wait(0); // اجازه reset کامل state Swal
 
-            // دریافت نام جلسه از کاربر
-            const { value: sessionName } = await Swal.fire({
+            const { value: sessionName, isConfirmed } = await Swal.fire({
                 title: 'نام جلسه',
+                text: 'لطفاً نام جلسه را وارد کنید',
                 input: 'text',
-                inputLabel: 'لطفاً نام جلسه را وارد کنید',
                 inputPlaceholder: 'مثلاً جلسه کلاس ۱۰۱',
                 showCancelButton: true,
                 confirmButtonText: 'تأیید',
                 cancelButtonText: 'انصراف',
-                inputValidator: value => !value ? 'نام جلسه الزامی است' : null
+                allowOutsideClick: false,
+                inputValidator: v => !v?.trim() ? 'نام جلسه نمی‌تواند خالی باشد' : null
             });
-            if (!sessionName) {
-                Swal.close();
-                return;
-            }
 
-            // ساخت جدول موقت چاپ
+            if (!isConfirmed) return;
+
             const printTable = document.createElement('table');
             printTable.style.width = '100%';
             printTable.style.borderCollapse = 'collapse';
-            printTable.style.fontSize = '13px';
 
-            // thead
             const thead = document.createElement('thead');
-            const headRow = document.createElement('tr');
-            ['تصویر', 'نام و نام خانوادگی', 'پایه تحصیلی', 'نام مدرسه', 'وضعیت حضور'].forEach(txt => {
-                const th = document.createElement('th');
-                th.innerText = txt;
-                th.style.border = '1px solid #ddd';
-                th.style.padding = '6px';
-                th.style.background = '#f8f9fa';
-                headRow.appendChild(th);
-            });
-            thead.appendChild(headRow);
+            const hr = document.createElement('tr');
+            ['تصویر', 'نام و نام خانوادگی', 'پایه', 'مدرسه', 'وضعیت حضور']
+                .forEach(t => {
+                    const th = document.createElement('th');
+                    th.innerText = t;
+                    th.style.border = '1px solid #ddd';
+                    th.style.padding = '6px';
+                    hr.appendChild(th);
+                });
+            thead.appendChild(hr);
             printTable.appendChild(thead);
 
-            // tbody
-            const newTbody = document.createElement('tbody');
-            for (const row of dataRows) {
-                const cells = Array.from(row.cells);
+            const tb = document.createElement('tbody');
+
+            rows.forEach(r => {
+                const c = r.cells;
                 const tr = document.createElement('tr');
 
-                // تصویر کوچک‌تر
-                const imgCell = document.createElement('td');
-                const img = cells[0].querySelector('img');
+                const imgTd = document.createElement('td');
+                const img = c[0].querySelector('img');
                 if (img) {
-                    const imgClone = img.cloneNode(true);
-                    imgClone.style.width = '40px';
-                    imgClone.style.height = '40px';
-                    imgClone.style.objectFit = 'cover';
-                    imgCell.appendChild(imgClone);
+                    const ic = img.cloneNode();
+                    ic.style.width = '40px';
+                    ic.style.height = '40px';
+                    ic.style.objectFit = 'cover';
+                    imgTd.appendChild(ic);
                 }
-                imgCell.style.border = '1px solid #ddd';
-                imgCell.style.padding = '4px';
-                imgCell.style.textAlign = 'center';
-                tr.appendChild(imgCell);
+                tr.appendChild(imgTd);
 
-                // نام و نام خانوادگی
-                const nameCell = document.createElement('td');
-                nameCell.innerText = cells[1].innerText.trim();
-                nameCell.style.border = '1px solid #ddd';
-                nameCell.style.padding = '4px';
-                tr.appendChild(nameCell);
+                [1, 2, 3].forEach(i => {
+                    const td = document.createElement('td');
+                    td.innerText = c[i].innerText.trim();
+                    tr.appendChild(td);
+                });
 
-                // پایه تحصیلی
-                const gradeCell = document.createElement('td');
-                gradeCell.innerText = cells[2].innerText.trim();
-                gradeCell.style.border = '1px solid #ddd';
-                gradeCell.style.padding = '4px';
-                tr.appendChild(gradeCell);
+                tr.appendChild(createStatusCell(extractRealStatus(c[4])));
+                tb.appendChild(tr);
+            });
 
-                // نام مدرسه
-                const schoolCell = document.createElement('td');
-                schoolCell.innerText = cells[3].innerText.trim();
-                schoolCell.style.border = '1px solid #ddd';
-                schoolCell.style.padding = '4px';
-                tr.appendChild(schoolCell);
-
-                // وضعیت حضور واقعی
-                const statusText = extractRealStatus(cells[4]);
-                tr.appendChild(createStatusCell(statusText));
-
-                newTbody.appendChild(tr);
-            }
-            printTable.appendChild(newTbody);
-
-            await wait(800);
-            Swal.close();
+            printTable.appendChild(tb);
 
             const now = new Date();
             const faDate = now.toLocaleDateString('fa-IR');
-            const time = now.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+            const faTime = now.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
 
-            const headerHtml = `<div style="text-align:center; font-size:18px; font-weight:bold; margin-bottom:10px; font-family: IRANYekan,sans-serif;">${sessionName}</div>`;
-            const footerHtml = `<div style="text-align:center; font-size:12px; margin-top:12px; font-family: IRANYekan,sans-serif; color:#333;">تاریخ و ساعت چاپ: ${faDate} - ${time}</div>`;
+            const html = `
+            <html lang="fa" dir="rtl">
+            <head>
+                <meta charset="utf-8"/>
+                <title>${sessionName}</title>
+                <style>
+                    body { font-family: IRANYekan, sans-serif; }
+                    table { width:100%; border-collapse:collapse; }
+                    th,td { border:1px solid #ddd; padding:6px; text-align:center }
+                    th { background:#f5f5f5 }
+                </style>
+            </head>
+            <body>
+                <h2 style="text-align:center">${sessionName}</h2>
+                ${printTable.outerHTML}
+                <div style="text-align:center;margin-top:10px;font-size:12px">
+                    تاریخ و ساعت چاپ: ${faDate} - ${faTime}
+                </div>
+            </body>
+            </html>`;
 
-            const docHtml = `
-                <html lang="fa" dir="rtl">
-                <head>
-                    <meta charset="utf-8"/>
-                    <title>${sessionName}</title>
-                    <style>
-                        @font-face {
-                            font-family: 'IRANYekan';
-                            src: url('/fonts/IRANYekanXFaNum-Regular.woff2') format('truetype');
-                        }
-                        body { font-family: 'IRANYekan', sans-serif; direction: rtl; margin: 20px; color: #111; }
-                        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-                        th, td { border: 1px solid #ddd; padding: 6px; text-align: right; }
-                        th { background: #f8f9fa; font-weight: 600; }
-                        tr:nth-child(even) { background: #fbfbfb; }
-                        @media print { body { margin: 6mm; } }
-                    </style>
-                </head>
-                <body>
-                    ${headerHtml}
-                    ${printTable.outerHTML}
-                    ${footerHtml}
-                </body>
-                </html>
-            `;
+            const w = window.open('', '_blank');
+            w.document.write(html);
+            w.document.close();
+            w.focus();
+            w.print();
+            setTimeout(() => w.close(), 1500);
 
-            const printWindow = window.open('', '_blank', 'width=1200,height=900,scrollbars=yes');
-            if (!printWindow) {
-                await showSwalFallback('error', 'خطا!', 'باز شدن پنجره چاپ مسدود شد.');
-                return;
-            }
-            printWindow.document.open();
-            printWindow.document.write(docHtml);
-            printWindow.document.close();
-
-            const doPrint = () => {
-                try { printWindow.focus(); printWindow.print(); }
-                catch (e) { console.error(e); }
-                finally { setTimeout(() => { try { printWindow.close(); } catch (e) { } }, 1400); }
-            };
-            if (printWindow.document.readyState === 'complete') doPrint();
-            else { printWindow.onload = doPrint; setTimeout(() => { if (!printWindow.closed) doPrint(); }, 2200); }
-
-        } catch (err) {
-            if (typeof Swal !== 'undefined') Swal.close();
-            console.error(err);
-            await showSwalFallback('error', 'خطا!', `خطا هنگام آماده‌سازی چاپ: ${err?.message || err}`);
+        } catch (e) {
+            Swal.close();
+            console.error(e);
+            await showSwalFallback('error', 'خطا!', e.message || e);
         }
     };
 })();
