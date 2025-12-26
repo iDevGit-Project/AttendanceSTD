@@ -46,6 +46,24 @@
 
     <!-- STEP 2 -->
     <div id="step-2" class="hidden space-y-4">
+        <div class="mb-3 text-sm text-slate-700">
+            تعداد دانش آموزان انتخاب شده:
+            <span id="selected-count" class="font-bold text-blue-600">0</span>
+        </div>
+
+        <div class="flex gap-2 mb-3">
+            <button id="select-all"
+                    type="button"
+                    class="px-3 py-1 text-sm rounded bg-green-100 hover:bg-green-200">
+                انتخاب همه
+            </button>
+
+            <button id="deselect-all"
+                    type="button"
+                    class="px-3 py-1 text-sm rounded bg-red-100 hover:bg-red-200">
+                لغو همه
+            </button>
+        </div>
 
         <div id="grade-tabs" class="flex gap-2 flex-wrap"></div>
 
@@ -75,7 +93,8 @@
             const toStep2Btn = document.getElementById('to-step-2');
             const toStep3Btn = document.getElementById('to-step-3');
             const backBtn = document.getElementById('back-to-step-1');
-
+            const selectAllBtn = document.getElementById('select-all');
+            const deselectAllBtn = document.getElementById('deselect-all');
             const gradeTabsContainer = document.getElementById('grade-tabs');
             const studentsContainer = document.getElementById('students-container');
             const modeRadios = document.querySelectorAll('input[name="mode"]');
@@ -102,6 +121,31 @@
                     selectedStudentIds.clear();
                 });
             });
+
+            /* ================== querySelectorAll ================== */
+                selectAllBtn.addEventListener('click', () => {
+                const checkboxes = studentsContainer.querySelectorAll('input[type="checkbox"]');
+
+                checkboxes.forEach(cb => {
+                    const id = Number(cb.value);
+                    cb.checked = true;
+                    selectedStudentIds.add(id);
+                });
+
+                updateSelectedCount();
+            });
+
+            deselectAllBtn.addEventListener('click', () => {
+            const checkboxes = studentsContainer.querySelectorAll('input[type="checkbox"]');
+
+            checkboxes.forEach(cb => {
+                const id = Number(cb.value);
+                cb.checked = false;
+                selectedStudentIds.delete(id);
+            });
+
+            updateSelectedCount();
+        });
 
             /* ================== Load Grades ================== */
             async function loadGrades() {
@@ -142,6 +186,14 @@
                 });
             }
 
+            /* ================== updateSelectedCount ================== */
+                        function updateSelectedCount() {
+                const el = document.getElementById('selected-count');
+                if (el) {
+                    el.textContent = selectedStudentIds.size;
+                }
+            }
+
             /* ================== Render Students ================== */
                 function renderStudents(list) {
                     studentsContainer.innerHTML = '';
@@ -173,6 +225,7 @@
                             } else {
                                 selectedStudentIds.delete(id);
                             }
+                             updateSelectedCount();
                         });
 
                         studentsContainer.appendChild(label);
