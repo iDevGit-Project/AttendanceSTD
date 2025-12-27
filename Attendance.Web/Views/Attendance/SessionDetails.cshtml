@@ -4,162 +4,181 @@
 @{
     ViewData["Title"] = "جزئیات جلسه - " + (Model.Title ?? "");
 }
-
-<div class="inline-flex items-center gap-2">
-    @if (Model?.DeletedAt == null)
-    {
-        <button type="button" id="archiveSessionBtn" class="px-3 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 text-sm">
-            بایگانی جلسه
-        </button>
-    }
-    else
-    {
-        <button type="button" id="unarchiveSessionBtn" class="px-3 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 text-sm">
-            بازگردانی از بایگانی
-        </button>
-    }
-
-</div>
+<!-- کارت و هدر -->
 <div class="bg-white rounded-lg border p-6 space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-800">@(Model?.Title ?? "بدون عنوان")</h1>
-            <p class="text-sm text-slate-500">شناسه جلسه: <span class="font-mono">@Model?.Id</span></p>
+            <h2 class="text-xl font-bold text-slate-800">اطلاعات مکان برگزاری جلسه جاری: <span class="text-sm bg-cyan-200/50 rounded-lg p-2">@Model?.Location</span></h2>
         </div>
 
-        <div class="text-right">
-            <a asp-action="Index" asp-controller="Attendance" class="inline-block px-3 py-2 bg-slate-100 rounded hover:bg-slate-200">بازگشت</a>
-            <button onclick="printSessionDetailsWithSwal()"
-                    class="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-                خروجی PDF جلسه
+        <div class="flex items-center gap-3">
+            @if (Model?.DeletedAt == null)
+            {
+                <button type="button" id="archiveSessionBtn" class="inline-block bg-rose-100/70 text-rose-800 font-bold px-3 py-2 rounded hover:bg-rose-200 transition">
+                    بایگانی کردن جلسه جاری
+                </button>
+            }
+            else
+            {
+                <button type="button" id="unarchiveSessionBtn" class="inline-block bg-teal-100/70 text-teal-800 font-bold px-3 py-2 rounded hover:teal-rose-200 transition">
+                    بازگردانی از بایگانی
+                </button>
+            }
+            <button type="button" onclick="printSessionDetailsWithSwal()" class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">
+                گزارشات
             </button>
-
+            <a asp-action="AllSessions" asp-controller="Attendance" class="inline-block px-3 py-2 bg-slate-100 font-bold rounded hover:bg-slate-200">بازگشت</a>
         </div>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="p-3 bg-slate-50 rounded">
-            <div class="text-sm text-slate-600">تاریخ جلسه</div>
-            <div class="font-bold text-slate-800">
-                @{
-                    string dateShamsi = "-";
-                    if (Model?.Date.HasValue == true)
+    <hr class="border-slate-200">
+    <div class="bg-slate-100/50 rounded-lg border border-dashed p-2">
+        <div class="flex-1">
+            <div class="grid grid-cols-1 md:grid-cols-3 text-center gap-3 text-sm">
+                <div class="bg-cyan-200/50 rounded-lg p-2">
+                    <div class="text-sm text-slate-800">
+                        تاریخ برگزاری جلسه:
+                        <span class="font-bold text-slate-800">
+                            @{
+                                string dateShamsi = "-";
+                                if (Model?.Date.HasValue == true)
+                                {
+                                    try { dateShamsi = PersianDateConverter.ToShamsiString(Model.Date.Value) ?? Model.Date.Value.ToString("yyyy-MM-dd"); }
+                                    catch { dateShamsi = Model.Date.Value.ToString("yyyy-MM-dd"); }
+                                }
+                            }
+                            @dateShamsi
+                        </span>
+                    </div>
+                </div>
+                <div class="bg-cyan-200/50 rounded-lg p-2">
+                    <div class="text-sm text-teal-800">
+                        ساعت شروع:
+                        <span class="font-bold text-slate-800">
+                            @{
+                                string startDisplay = "-";
+                                string periodLabel = "";
+
+                                if (Model?.StartAt.HasValue == true)
+                                {
+                                    var startAt = Model.StartAt.Value;
+
+                                    startDisplay = startAt.ToString("HH:mm");
+
+                                    periodLabel = startAt.Hour < 12 ? "صبح" : "عصر";
+                                }
+                            }
+                            @startDisplay
+                            @if (!string.IsNullOrEmpty(periodLabel))
+                            {
+                                <span class="mr-1 text-slate-800 text-xs">(@periodLabel)</span>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="bg-cyan-200/50 rounded-lg p-2">
+                    <div class="text-sm text-teal-800">
+                        مکان برگزاری جلسه:
+                        <span class="font-bold text-slate-800">@((Model?.Location) ?? "-")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="bg-slate-100/20 border rounded">
+        <form id="attendance-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="sessionId" value="@Model.Id" />
+
+            <table class="min-w-full divide-y divide-slate-100">
+                <thead class="bg-blue-100/20">
+                    <tr>
+                        <th class="px-3 py-2 text-right text-sm">تصویر</th>
+                        <th class="px-3 py-2 text-center text-sm"> نام و نام خانوادگی</th>
+                        <th class="px-3 py-2 text-center text-sm">پایه تحصیلی</th>
+                        <th class="px-3 py-2 text-center text-sm">نام مدرسه</th>
+                        <th class="px-3 py-2 text-center text-sm">وضعیت حضور</th>
+                        <th class="px-3 py-2 text-center text-sm">یادداشت</th>
+                        <th class="px-3 py-2 text-center text-sm">توضیحات</th>
+                    </tr>
+                </thead>
+                <tbody id="session-details-table-body" class="bg-white divide-y divide-slate-100">
+                    @if (Model?.Records == null || !Model.Records.Any())
                     {
-                        try { dateShamsi = PersianDateConverter.ToShamsiString(Model.Date.Value) ?? Model.Date.Value.ToString("yyyy-MM-dd"); }
-                        catch { dateShamsi = Model.Date.Value.ToString("yyyy-MM-dd"); }
-                    }
-                }
-                @dateShamsi
-            </div>
-        </div>
-        <div class="p-3 bg-slate-50 rounded">
-            <div class="text-sm text-slate-600">شروع</div>
-            <div class="font-bold">
-                @{
-                    string startDisplay = "-";
-                    if (Model?.StartAt.HasValue == true) startDisplay = Model.StartAt.Value.ToString("HH:mm");
-                }
-                @startDisplay
-            </div>
-        </div>
-        <div class="p-3 bg-slate-50 rounded">
-            <div class="text-sm text-slate-600">مکان</div>
-            <div class="font-bold">@((Model?.Location) ?? "-")</div>
-        </div>
-    </div>
-    <div class="pt-2">
-        <h2 class="text-lg font-semibold text-slate-700">فهرست دانش‌آموزان ( @(Model?.Records?.Count() ?? 0) )</h2>
-        <div class="mt-3 overflow-x-auto">
-            <form id="attendance-form" class="space-y-4">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="sessionId" value="@Model.Id" />
-
-                <table class="min-w-full divide-y divide-slate-100">
-                    <thead class="bg-blue-50">
                         <tr>
-                            <th class="px-3 py-2 text-right text-sm">تصویر</th>
-                            <th class="px-3 py-2 text-center text-sm"> نام و نام خانوادگی</th>
-                            <th class="px-3 py-2 text-center text-sm">پایه تحصیلی</th>
-                            <th class="px-3 py-2 text-center text-sm">نام مدرسه</th>
-                            <th class="px-3 py-2 text-center text-sm">وضعیت حضور</th>
-                            <th class="px-3 py-2 text-center text-sm">یادداشت</th>
-                            <th class="px-3 py-2 text-center text-sm">توضیحات</th>
+                            <td colspan="7" class="text-center text-slate-500 py-6">هیچ رکوردی وجود ندارد.</td>
                         </tr>
-                    </thead>
-                    <tbody id="session-details-table-body" class="bg-white divide-y divide-slate-100">
-                        @if (Model?.Records == null || !Model.Records.Any())
+                    }
+                    else
+                    {
+                        foreach (var r in Model.Records)
                         {
-                            <tr>
-                                <td colspan="7" class="text-center text-slate-500 py-6">هیچ رکوردی وجود ندارد.</td>
+                            var st = r.Student;
+                            <tr id="row-@r.Id" class="hover:bg-slate-50" data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">
+                                <td class="px-3 py-2 text-right">
+                                    <img src="@(st?.PhotoPath ?? "/uploads/students/default.png")" class="h-10 w-10 object-cover rounded" alt="photo" />
+                                </td>
+                                <td class="px-3 py-2 text-center text-sm">@((st?.FirstName + " " + st?.LastName) ?? "")</td>
+                                <td class="px-3 py-2 text-center text-sm">@((st?.Grade) ?? "")</td>
+                                <td class="px-3 py-2 text-center text-sm">@((st?.SchoolName) ?? "")</td>
+                                <td class="px-3 py-2 text-center text-sm">
+                                    @{
+                                        int? statusInt = null;
+                                        try
+                                        {
+                                            statusInt = (int)r.Status;
+                                        }
+                                        catch
+                                        {
+                                            statusInt = null;
+                                        }
+
+                                        var optNone = statusInt == null ? " selected" : "";
+                                        var optPresent = statusInt == 1 ? " selected" : "";
+                                        var optAbsent = statusInt == 2 ? " selected" : "";
+                                        var optLate = statusInt == 3 ? " selected" : "";
+                                        var optExcused = statusInt == 4 ? " selected" : "";
+
+                                        var optionsHtml =
+                                        "<option value=\"\"" + optNone + ">— انتخاب نشده —</option>"
+                                        + "<option value=\"1\"" + optPresent + ">حاضر</option>"
+                                        + "<option value=\"2\"" + optAbsent + ">غیبت غیرموجه</option>"
+                                        + "<option value=\"4\"" + optExcused + ">غیبت موجه</option>"
+                                        + "<option value=\"3\"" + optLate + ">تأخیر</option>";
+                                    }
+                                    <select class="status-select px-2 py-1 border rounded text-sm"
+                                            data-record-id="@r.Id"
+                                            data-student-id="@(st?.Id ?? 0)">
+                                        @Html.Raw(optionsHtml)
+                                    </select>
+                                </td>
+                                <td class="px-3 py-2 text-center text-sm">
+                                    <textarea class="attendance-note px-2 py-1 border rounded text-sm" rows="1"
+                                      data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">@(r.Note ?? "")</textarea>
+                                </td>
+                                <td class="px-3 py-2 text-center text-sm">
+                                    <input type="number" min="0" step="1"
+                                           class="late-minutes px-2 py-1 border rounded text-sm"
+                                           placeholder="دقیقه"
+                                           value="@(r.LateMinutes.HasValue? r.LateMinutes.Value.ToString() : "")"
+                                           data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)" />
+                                </td>
                             </tr>
                         }
-                        else
-                        {
-                            foreach (var r in Model.Records)
-                            {
-                                var st = r.Student;
-                                <tr id="row-@r.Id" class="hover:bg-slate-50" data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">
-                                    <td class="px-3 py-2 text-right">
-                                        <img src="@(st?.PhotoPath ?? "/uploads/students/default.png")" class="h-10 w-10 object-cover rounded" alt="photo" />
-                                    </td>
-                                    <td class="px-3 py-2 text-center text-sm">@((st?.FirstName + " "+ st?.LastName) ?? "")</td>
-                                    <td class="px-3 py-2 text-center text-sm">@((st?.Grade) ?? "")</td>
-                                    <td class="px-3 py-2 text-center text-sm">@((st?.SchoolName) ?? "")</td>
-                                    <td class="px-3 py-2 text-center text-sm">
-                                        @{
-                                            int? statusInt = null;
-                                            try
-                                            {
-                                                statusInt = (int)r.Status;
-                                            }
-                                            catch
-                                            {
-                                                statusInt = null;
-                                            }
-
-                                            var optNone = statusInt == null ? " selected" : "";
-                                            var optPresent = statusInt == 1 ? " selected" : "";
-                                            var optAbsent = statusInt == 2 ? " selected" : "";
-                                            var optLate = statusInt == 3 ? " selected" : "";
-                                            var optExcused = statusInt == 4 ? " selected" : "";
-
-                                            var optionsHtml =
-                                            "<option value=\"\"" + optNone + ">— انتخاب نشده —</option>"
-                                            + "<option value=\"1\"" + optPresent + ">حاضر</option>"
-                                            + "<option value=\"2\"" + optAbsent + ">غیبت غیرموجه</option>"
-                                            + "<option value=\"4\"" + optExcused + ">غیبت موجه</option>"
-                                            + "<option value=\"3\"" + optLate + ">تأخیر</option>";
-                                        }
-                                        <select class="status-select px-2 py-1 border rounded text-sm"
-                                                data-record-id="@r.Id"
-                                                data-student-id="@(st?.Id ?? 0)">
-                                            @Html.Raw(optionsHtml)
-                                        </select>
-                                    </td>
-
-                                    <td class="px-3 py-2 text-center text-sm">
-                                        <textarea class="attendance-note px-2 py-1 border rounded text-sm" rows="1"
-                                          data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)">@(r.Note ?? "")</textarea>
-                                    </td>
-
-                                    <td class="px-3 py-2 text-center text-sm">
-                                        <input type="number" min="0" step="1"
-                                               class="late-minutes px-2 py-1 border rounded text-sm"
-                                               placeholder="دقیقه"
-                                               value="@(r.LateMinutes.HasValue? r.LateMinutes.Value.ToString() : "")"
-                                               data-record-id="@r.Id" data-student-id="@(st?.Id ?? 0)" />
-                                    </td>
-                                </tr>
-                            }
-                        }
-                </table>
-                <div class="mt-4 flex items-center gap-3">
-                    <button type="button" id="saveAttendanceBtn" class="px-4 py-2 bg-green-600 text-white rounded">ذخیره حضور/غیاب</button>
-                    <a asp-action="Index" asp-controller="Attendance" class="px-3 py-2 bg-slate-100 rounded hover:bg-slate-200">انصراف</a>
+                    }
+            </table>
+            <!-- Action buttons -->
+            <div class="flex items-center justify-center gap-4 mt-6 p-4">
+                <div class="flex items-center aligap-3">
+                    <button type="button" id="saveAttendanceBtn" class="inline-block bg-green-600 text-slate-100 px-3 py-2 rounded hover:bg-green-700 transition">ثبت و ذخیره</button>
                 </div>
-            </form>
-        </div>
+                <div>
+                    <a asp-action="Index" asp-controller="Attendance" class="inline-block px-3 py-2 bg-slate-100 font-bold text-slate-800 rounded hover:bg-slate-200 transition">انصراف و بازگشت</a>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
+
 
 @section SessionDetailsScripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -292,6 +311,23 @@
             });
         })();
     </script>
+    <style>
+        .swal2-validation-message {
+            background: #fff1f2; /* معادل Tailwind bg-rose-50 */
+            color: #9f1239; /* معادل تقریبی text-rose-700 */
+            padding: 0.5rem 1rem; /* px-4 py-2 */
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem; /* mt-3 */
+            font-size: 0.875rem; /* text-sm */
+            direction: rtl;
+            text-align: right;
+            box-shadow: none;
+            white-space: normal;
+            word-break: break-word;
+        }
+    </style>
     <script>
         (function(){
             function getAntiForgeryToken() {
