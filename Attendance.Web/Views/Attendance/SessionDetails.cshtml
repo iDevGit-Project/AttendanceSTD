@@ -8,7 +8,8 @@
 <div class="bg-white rounded-lg border p-6 space-y-4">
     <div class="flex items-center justify-between gap-4">
         <div>
-            <h2 class="text-xl font-bold text-slate-800">اطلاعات مکان برگزاری جلسه جاری: <span class="text-sm bg-cyan-200/50 rounded-lg p-2">@Model?.Location</span></h2>
+            <h2 class="text-xl font-bold text-slate-800">اطلاعات کلیه جلسات ثبت شده </h2>
+            <p class="text-sm text-slate-500">نمایش و مدیریت دانش‌آموزان (غیرفعال)</p>
         </div>
 
         <div class="flex items-center gap-3">
@@ -27,7 +28,7 @@
             <button type="button" onclick="printSessionDetailsWithSwal()" class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">
                 گزارشات
             </button>
-            <a asp-action="AllSessions" asp-controller="Attendance" class="inline-block px-3 py-2 bg-slate-100 font-bold rounded hover:bg-slate-200">بازگشت</a>
+            <a asp-action="AllSessions" asp-controller="Attendance" class="inline-block px-3 py-2 bg-slate-800 text-slate-100 rounded hover:bg-blue-500 transition">بازگشت به لیست جلسات</a>
         </div>
     </div>
     <hr class="border-slate-200">
@@ -172,7 +173,7 @@
                     <button type="button" id="saveAttendanceBtn" class="inline-block bg-green-600 text-slate-100 px-3 py-2 rounded hover:bg-green-700 transition">ثبت و ذخیره</button>
                 </div>
                 <div>
-                    <a asp-action="Index" asp-controller="Attendance" class="inline-block px-3 py-2 bg-slate-100 font-bold text-slate-800 rounded hover:bg-slate-200 transition">انصراف و بازگشت</a>
+                    <a asp-action="Index" asp-controller="Attendance" class="inline-block px-3 py-2 bg-slate-800 text-slate-100 rounded hover:bg-blue-500 transition">انصراف و بازگشت</a>
                 </div>
             </div>
         </form>

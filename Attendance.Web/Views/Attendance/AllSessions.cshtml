@@ -4,40 +4,64 @@
 @{
     ViewData["Title"] = "تمام جلسات";
 }
-
-<div class="bg-white rounded-lg p-6">
-    <div class="flex items-center justify-between mb-4">
+<!-- کارت و هدر -->
+<div class="bg-white rounded-lg border p-6 space-y-4">
+    <div class="flex items-center justify-between gap-4">
         <div>
-            <h1 class="text-lg font-semibold">تمام جلسات</h1>
+            <h1 class="text-lg font-semibold">اطلاعات کلیه جلسات ثبت شده در سامانه</h1>
             <div class="text-sm text-slate-500">نمایش جلسات ذخیره‌شده در سیستم</div>
         </div>
-
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
             <a asp-action="CreateWizard" asp-controller="Attendance" class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">ایجاد جلسه جدید</a>
+            <button type="button" onclick="#" class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">
+                گزارشات
+            </button>
+            <a asp-action="Index" asp-controller="Home" class="inline-block px-3 py-2 bg-slate-800 text-slate-100 rounded hover:bg-blue-500 transition">بازگشت</a>
         </div>
     </div>
-
-    <!-- جستجو و pageSize مشابه Index دانش‌آموزان -->
-    <form method="get" class="mb-4 flex gap-2 items-center">
-        <input
-            name="search"
-            value="@(WebUtility.HtmlDecode(Model?.Search ?? ""))"
-            placeholder="جستجو در عنوان یا مکان"
-            class="px-3 py-2 border rounded w-72"
-            autocomplete="off" />
-        <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded">جستجو</button>
-
-        <div class="ml-auto flex items-center gap-2">
-            <label class="text-sm text-slate-600">نمایش در هر صفحه:</label>
-            <select id="pageSizeSelector" name="pageSize" class="px-2 py-1 border rounded text-sm">
-                <option value="5" selected='@(Model.PageSize == 5 ? "selected" : null)'>5</option>
-                <option value="10" selected='@(Model.PageSize == 10 ? "selected" : null)'>10</option>
-                <option value="25" selected='@(Model.PageSize == 25 ? "selected" : null)'>25</option>
-                <option value="50" selected='@(Model.PageSize == 50 ? "selected" : null)'>50</option>
-            </select>
+    <div class="bg-slate-100/50 rounded-lg border border-dashed p-2">
+        <div class="flex-1">
+            <div class="grid grid-cols-1 md:grid-cols-3 text-center gap-3 text-sm">
+                <div class="bg-cyan-200/50 rounded-lg p-2">
+                    <div class="text-sm text-cyan-750">
+                        تعداد کل جلسات ثبت شده:
+                        <span class="font-bold text-slate-700">  جلسه</span>
+                    </div>
+                </div>
+                <div class="bg-teal-100 rounded-lg p-2">
+                    <div class="text-sm text-teal-800">
+                        تعداد کل جلسات فعال:
+                        <span class="font-bold text-teal-700">  جلسه</span>
+                    </div>
+                </div>
+                <div class="bg-rose-100 rounded-lg p-2">
+                    <div class="text-sm text-rose-800">
+                        تعداد کل جلسات بایگانی شده:
+                        <span class="font-bold text-rose-700"> جلسه</span>
+                    </div>
+                </div>
+            </div>
         </div>
-    </form>
-
+    </div>
+    <div class="bg-blue-100/30 rounded-lg border border-blue-200  border-dashed p-2">
+        <div class="flex-1">
+            <div class="flex items-center justify-center gap-4">
+                <form method="get" class="flex items-center gap-2">
+                    <input name="search" value="@(WebUtility.HtmlDecode(Model?.Search ?? ""))" placeholder="نام جلسه مورد نظر خود را وارد نمایید" class="px-3 py-2 border rounded w-80 text-sm" autocomplete="off" />
+                    <button type="submit" class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">جستجو</button>
+                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                        <span>تعداد صفحات:</span>
+                        <select id="pageSizeSelector" name="pageSize" class="px-2 py-1 border rounded text-sm">
+                            <option value="5" selected='@(Model.PageSize == 5 ? "selected" : null)'>5</option>
+                            <option value="10" selected='@(Model.PageSize == 10 ? "selected" : null)'>10</option>
+                            <option value="25" selected='@(Model.PageSize == 25 ? "selected" : null)'>25</option>
+                            <option value="50" selected='@(Model.PageSize == 50 ? "selected" : null)'>50</option>
+                        </select>
+                    </label>
+                </form>
+            </div>
+        </div>
+    </div>
     <div class="bg-slate-100/20 border rounded">
         <table class="min-w-full divide-y divide-slate-100">
             <thead class="bg-blue-100/20">
@@ -176,10 +200,12 @@
     </div>
 </div>
 
+
 @section AllSessionsStudentsScripts {
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const pageSizeSelector = document.getElementById("pageSizeSelector");
+            const input = document.getElementById('sessionsSearchInput');
             if (!pageSizeSelector) return;
 
             pageSizeSelector.addEventListener("change", function () {

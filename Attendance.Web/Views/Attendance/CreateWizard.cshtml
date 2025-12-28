@@ -10,75 +10,79 @@
 <form id="__antiforgery" style="display:none" method="post" asp-action="CreateSession" asp-controller="Attendance">
     @Html.AntiForgeryToken()
 </form>
-
+<!-- کارت و هدر -->
 <div class="bg-white rounded-lg border p-6 space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-4">
         <div>
-            <h2 class="text-xl font-bold text-slate-800">مدیریت جلسات</h2>
+            <h2 class="text-xl font-bold text-slate-800">ساخت و مدیریت جلسه جدید</h2>
             <p class="text-sm text-slate-500">مدیریت جلسات حضور و غیاب به صورت مرحله‌ای</p>
         </div>
-        <a asp-action="Index" asp-controller="Students"
-           class="px-3 py-2 bg-slate-100 rounded hover:bg-slate-200">بازگشت</a>
+        <div class="flex items-center gap-3">
+            <a asp-action="AllSessions" asp-controller="Attendance" class="inline-block px-3 py-2 bg-slate-800 text-slate-100 rounded hover:bg-blue-500 transition">بازگشت به لیست جلسات</a>
+        </div>
     </div>
+    <hr class="border-slate-200">
+    <div class="bg-slate-100/50 rounded-lg border border-dashed p-2">
+        <div class="flex-1">
+            <div class="flex items-center justify-center grid grid-cols-3 md:grid-cols-1 text-center gap-3 text-sm">
+                <!-- STEP 1 -->
+                <div id="step-1" class="space-y-4">
+                    <h3 class="font-bold text-lg">مرحله ۱ — نحوه انتخاب دانش‌آموزان</h3>
 
-    <hr />
+                    <div class="flex gap-6">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="mode" value="byGrade" checked />
+                            بر اساس پایه تحصیلی
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="mode" value="all" />
+                            همه دانش‌آموزان (تمام پایه‌ها)
+                        </label>
+                    </div>
 
-    <!-- STEP 1 -->
-    <div id="step-1" class="space-y-4">
-        <h3 class="font-bold text-lg">مرحله ۱ — نحوه انتخاب دانش‌آموزان</h3>
+                    <button id="to-step-2"
+                            class="bg-green-600 text-white px-4 py-2 rounded">
+                        ادامه
+                    </button>
+                </div>
 
-        <div class="flex gap-6">
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="mode" value="byGrade" checked />
-                بر اساس پایه تحصیلی
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="mode" value="all" />
-                همه دانش‌آموزان (تمام پایه‌ها)
-            </label>
-        </div>
+                <!-- STEP 2 -->
+                <div id="step-2" class="hidden space-y-4">
+                    <div class="mb-3 text-sm text-slate-700">
+                        تعداد دانش آموزان انتخاب شده:       
+                        <span id="selected-count" class="font-bold text-blue-600">0</span>
+                    </div>
 
-        <button id="to-step-2"
-                class="bg-green-600 text-white px-4 py-2 rounded">
-            ادامه
-        </button>
-    </div>
+                    <div class="flex gap-2 justify-center mb-3">
+                        <button id="select-all"
+                                type="button"
+                                class="px-3 py-2 bg-slate-200  font-bold  text-sm rounded hover:bg-teal-200">
+                            انتخاب همه
+                        </button>
 
-    <!-- STEP 2 -->
-    <div id="step-2" class="hidden space-y-4">
-        <div class="mb-3 text-sm text-slate-700">
-            تعداد دانش آموزان انتخاب شده:
-            <span id="selected-count" class="font-bold text-blue-600">0</span>
-        </div>
+                        <button id="deselect-all"
+                                type="button"
+                                class="px-3 py-2 bg-slate-200 font-bold  text-sm rounded hover:bg-rose-200">
+                            لغو همه
+                        </button>
+                    </div>
 
-        <div class="flex gap-2 mb-3">
-            <button id="select-all"
-                    type="button"
-                    class="px-3 py-1 text-sm rounded bg-green-100 hover:bg-green-200">
-                انتخاب همه
-            </button>
+                    <div id="grade-tabs" class="grid grid-cols-1 md:grid-cols-3 text-center gap-3 text-sm"></div>
 
-            <button id="deselect-all"
-                    type="button"
-                    class="px-3 py-1 text-sm rounded bg-red-100 hover:bg-red-200">
-                لغو همه
-            </button>
-        </div>
+                    <div id="students-container" class="grid grid-cols-1 md:grid-cols-3 text-center gap-3 text-sm"></div>
 
-        <div id="grade-tabs" class="flex gap-2 flex-wrap"></div>
+                    <div class="flex gap-4 justify-center">
+                        <button id="to-step-3"
+                                class="bg-teal-600 text-white px-4 py-2 rounded">
+                            ثبت جلسه
+                        </button>
 
-        <div id="students-container" class="grid gap-2"></div>
-
-        <div class="flex gap-4 justify-center">
-            <button id="to-step-3"
-                    class="bg-green-600 text-white px-4 py-2 rounded">
-                ثبت جلسه
-            </button>
-
-            <button id="back-to-step-1"
-                    class="bg-rose-100 text-rose-700 px-4 py-2 rounded">
-                بازگشت
-            </button>
+                        <button id="back-to-step-1" class="px-3 py-2 bg-slate-800 text-slate-100 rounded hover:bg-blue-500 transition">
+                            انصراف و بازگشت
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -123,7 +127,7 @@
             });
 
             /* ================== querySelectorAll ================== */
-                selectAllBtn.addEventListener('click', () => {
+             selectAllBtn.addEventListener('click', () => {
                 const checkboxes = studentsContainer.querySelectorAll('input[type="checkbox"]');
 
                 checkboxes.forEach(cb => {
@@ -148,21 +152,21 @@
         });
 
             /* ================== Load Grades ================== */
-            async function loadGrades() {
+                async function loadGrades() {
                 const res = await fetch('@Url.Action("GetGrades", "Attendance")');
                 if (!res.ok) throw new Error();
                 return await res.json();
             }
 
             /* ================== Load Students ================== */
-            async function loadStudentsByGrade(grade) {
+                async function loadStudentsByGrade(grade) {
                 if (cache[grade]) return cache[grade];
                 const res = await fetch('@Url.Action("GetStudentsByGrade", "Attendance")?grade=' + encodeURIComponent(grade));
                 if (!res.ok) throw new Error();
                 return cache[grade] = await res.json();
             }
 
-            async function loadAllStudents() {
+                async function loadAllStudents() {
                 if (cache.ALL) return cache.ALL;
                 const res = await fetch('@Url.Action("GetAllStudents", "Attendance")');
                 if (!res.ok) throw new Error();
@@ -170,7 +174,7 @@
             }
 
             /* ================== Render Tabs ================== */
-            function renderGradeTabs(grades) {
+                function renderGradeTabs(grades) {
                 gradeTabsContainer.innerHTML = '';
                 grades.forEach(g => {
                     const btn = document.createElement('button');
@@ -187,7 +191,7 @@
             }
 
             /* ================== updateSelectedCount ================== */
-                        function updateSelectedCount() {
+                function updateSelectedCount() {
                 const el = document.getElementById('selected-count');
                 if (el) {
                     el.textContent = selectedStudentIds.size;
@@ -204,7 +208,7 @@
                         const checked = selectedStudentIds.has(studentId);
 
                         const label = document.createElement('label');
-                        label.className = 'flex items-center gap-3 p-2 border rounded cursor-pointer';
+                        label.className = 'flex items-center gap-3 p-2 border border-dashed border-blue-800 bg-blue-100/70 rounded cursor-pointer';
 
                         label.innerHTML = `
                             <input type="checkbox" value="${studentId}" ${checked ? 'checked' : ''} />
@@ -212,7 +216,7 @@
                                  class="w-10 h-10 rounded object-cover" />
                             <div>
                                 <div class="font-bold">${s.firstName} ${s.lastName}</div>
-                                <div class="text-xs text-slate-500">${s.nationalCode || ''}</div>
+                                <div class="text-xs text-slate-800">${s.nationalCode || ''}</div>
                             </div>
                         `;
 
@@ -306,8 +310,19 @@
                 const data = await res.json();
                 if (!res.ok) return Swal.fire('خطا', data.error || 'ناموفق', 'error');
 
-                Swal.fire('موفق', 'جلسه ایجاد شد', 'success')
-                    .then(() => location.href = `/Attendance/SessionDetails/${data.id}`);
+                Swal.fire({
+                    title: 'عملیات موفق',
+                    text: `جلسه جدید با موفقیت ایجاد شد.`,
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: 'ثبت نهایی',
+                    cancelButtonText: 'بازگشت',
+                    customClass: {
+                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+                        cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2  bg-rose-600 text-sm text-slate-100 rounded hover:bg-rose-700 transition mt-3",
+                    },
+                    reverseButtons: true
+                }) .then(() => location.href = `/Attendance/SessionDetails/${data.id}`);
             };
         })();
     </script>
