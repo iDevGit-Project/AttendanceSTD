@@ -303,16 +303,16 @@
                 allowEscapeKey: true,
                 showCancelButton: true,
                 buttonsStyling: false,
-                cancelButtonText: 'انصراف',
                 confirmButtonText: 'تأیید و ادامه',
+                cancelButtonText: 'انصراف',
                 customClass: {
                     cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
-                    confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-green-600 text-sm text-slate-100 rounded hover:bg-green-700 transition mt-3",
+                    confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-100/70 font-bold text-rose-800 text-sm rounded hover:bg-rose-200 transition mt-3",
                 },
                 reverseButtons: true,
                 preConfirm: (value) => {
                     if (!value || !value.trim()) {
-                        Swal.showValidationMessage(`<div class="text-rose-600 text-sm font-bold px-3 py-1 rounded">لطفاً دلیل غیرفعالسازی اطلاعات این دانش آموز را وارد نمایید.</div>`);
+                        Swal.showValidationMessage(`<div class="text-rose-800 text-sm font-bold px-3 py-1 rounded">لطفاً دلیل غیرفعالسازی اطلاعات این دانش آموز را وارد نمایید.</div>`);
                     }
                     return value ? value.trim() : '';
                 }
@@ -337,9 +337,8 @@
                     cancelButtonText: 'خیر، انصراف',
                     customClass: {
                         cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
-                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-600 text-sm text-slate-100 rounded hover:bg-rose-700 transition mt-3",
+                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-100/70 font-bold text-rose-800 text-sm rounded hover:bg-rose-200 transition mt-3",
                     },
-                    reverseButtons: true
                 }).then(confirmResult => {
                     if (confirmResult.isConfirmed) {
 
@@ -348,6 +347,7 @@
                             title: 'در حال غیرفعال‌سازی...',
                             text: 'لطفاً چند لحظه صبر کنید',
                             allowOutsideClick: false,
+                            allowEscapeKey: true,
                             didOpen: () => {
                                 Swal.showLoading();
                                 form.submit();

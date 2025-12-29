@@ -267,7 +267,17 @@
                         location: document.getElementById('loc').value,
                         startTime: document.getElementById('time').value
                     }),
-                    showCancelButton: true
+                    allowOutsideClick: false,
+                    animation: true,
+                    allowEscapeKey: true,
+                    showCancelButton: true,
+                    buttonsStyling: false,
+                    confirmButtonText: 'تأیید و ادامه',
+                    cancelButtonText: 'انصراف و بازگشت',
+                    customClass: {
+                        cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-teal-100/70 font-bold text-teal-800 text-sm rounded hover:bg-teal-300 transition mt-3",
+                    },
                 });
                 return r.isConfirmed ? r.value : null;
             }
@@ -275,7 +285,20 @@
             /* ================== FINAL SAVE ================== */
             toStep3Btn.onclick = async () => {
                 if (!selectedStudentIds.size)
-                    return Swal.fire('هشدار', 'دانش‌آموزی انتخاب نشده', 'warning');
+                    return Swal.fire({
+                    title: 'هشدار',
+                    text: `کاربرگرامی: هیچ دانش آموزی انتخاب نشده است.`,
+                    icon: 'warning',
+                    allowOutsideClick: false,
+                    animation: true,
+                    allowEscapeKey: true,
+                    showCancelButton: false,
+                    buttonsStyling: false,
+                    confirmButtonText: 'قبول و بازگشت',
+                    customClass: {
+                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-amber-100 font-bold text-sm text-slate-800 rounded hover:bg-amber-300 transition mt-3",
+                    }
+                 });
 
                 const meta = await askSessionMeta();
                 if (!meta) return;
@@ -314,12 +337,14 @@
                     title: 'عملیات موفق',
                     text: `جلسه جدید با موفقیت ایجاد شد.`,
                     icon: 'success',
-                    showCancelButton: true,
+                    allowOutsideClick: false,
+                    animation: true,
+                    allowEscapeKey: true,
+                    showCancelButton: false,
+                    buttonsStyling: false,
                     confirmButtonText: 'ثبت نهایی',
-                    cancelButtonText: 'بازگشت',
                     customClass: {
-                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
-                        cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2  bg-rose-600 text-sm text-slate-100 rounded hover:bg-rose-700 transition mt-3",
+                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-teal-100 font-bold text-sm text-slate-800 rounded hover:bg-teal-300 transition mt-3",
                     },
                     reverseButtons: true
                 }) .then(() => location.href = `/Attendance/SessionDetails/${data.id}`);

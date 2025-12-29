@@ -16,13 +16,13 @@
             @if (Model?.DeletedAt == null)
             {
                 <button type="button" id="archiveSessionBtn" class="inline-block bg-rose-100/70 text-rose-800 font-bold px-3 py-2 rounded hover:bg-rose-200 transition">
-                    بایگانی کردن جلسه جاری
+                    بایگانی کردن : <span class="text-rose-800">@((Model.Title))</span> در سیستم
                 </button>
             }
             else
             {
-                <button type="button" id="unarchiveSessionBtn" class="inline-block bg-teal-100/70 text-teal-800 font-bold px-3 py-2 rounded hover:teal-rose-200 transition">
-                    بازگردانی از بایگانی
+                <button type="button" id="unarchiveSessionBtn" class="inline-block bg-teal-100/70 text-teal-800 font-bold px-3 py-2 rounded hover:bg-teal-200 transition">
+                    بازیابی : <span class="text-teal-800">@((Model.Title))</span> به سیستم
                 </button>
             }
             <button type="button" onclick="printSessionDetailsWithSwal()" class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">
@@ -369,15 +369,22 @@
 
                     const confirm = await Swal.fire({
                         title: 'آیا مطمئن هستید؟',
-                        text: 'جلسه به آرشیو منتقل خواهد شد. در صورت نیاز بعداً می‌توانید آن را بازگردانی کنید.',
-                        icon: 'warning',
+                        text: 'جلسه فوق آرشیو و در صورت نیاز می‌توانید آن را بازگردانی کنید.',
+                        icon: 'error',
+                        allowOutsideClick: false,
+                        allowEscapeKey: true,
                         showCancelButton: true,
-                        confirmButtonText: 'بایگانی کن',
-                        cancelButtonText: 'انصراف'
+                        buttonsStyling: false,
+                        confirmButtonText: 'تأیید و ادامه',
+                        cancelButtonText: 'انصراف و بازگشت',
+                        customClass: {
+                            cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+                            confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-100/70 font-bold text-rose-800 text-sm rounded hover:bg-rose-300 transition mt-3",
+                        },
                     });
                     if (!confirm.isConfirmed) return;
 
-                    Swal.fire({ title: 'در حال بایگانی...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+                    Swal.fire({ title: 'در حال بایگانی...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, allowEscapeKey: true });
                     const res = await postAjax('@Url.Action("ArchiveSessionAjax", "Attendance")', { id: sid });
                     Swal.close();
                     if (!res) return;
@@ -385,7 +392,19 @@
                         const msg = (res.json && (res.json.error || res.json.message)) ? (res.json.error || res.json.message) : res.text || 'خطا';
                         return Swal.fire({ icon: 'error', title: 'خطا', text: msg });
                     }
-                    Swal.fire({ icon: 'success', title: 'بایگانی شد', text: (res.json && res.json.message) ? res.json.message : 'جلسه بایگانی شد.' })
+                    Swal.fire({ 
+                        title: 'آرشیو جلسه با موفقیت انجام شد.', 
+                        icon: 'success', 
+                        text: (res.json && res.json.message) ? res.json.message : 'جلسه جاری شما آرشیو و بایگانی شد.' ,
+                        allowOutsideClick: false,
+                        allowEscapeKey: true,
+                        showCancelButton: false,
+                        buttonsStyling: false,
+                        confirmButtonText: 'ثبت نهایی و بازگشت',
+                        customClass: {
+                            confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-teal-100/70 font-bold text-teal-800 text-sm rounded hover:bg-teal-300 transition mt-3",
+                        },
+                        })
                         .then(() => {
                             // بعد از موفقیت برو به صفحه ArchivedSessions
                             window.location.href = '@Url.Action("ArchivedSessions", "Attendance")';
@@ -406,7 +425,19 @@
                         const msg = (res.json && (res.json.error || res.json.message)) ? (res.json.error || res.json.message) : res.text || 'خطا';
                         return Swal.fire({ icon: 'error', title: 'خطا', text: msg });
                     }
-                    Swal.fire({ icon: 'success', title: 'بازگردانی شد', text: (res.json && res.json.message) ? res.json.message : 'جلسه بازگردانی شد.' })
+                    Swal.fire({ 
+                        icon: 'success', 
+                        title: 'بازگردانی شد',
+                        text: (res.json && res.json.message) ? res.json.message : 'جلسه بازگردانی شد.' ,
+                        allowOutsideClick: false,
+                        allowEscapeKey: true,
+                        showCancelButton: false,
+                        buttonsStyling: false,
+                        confirmButtonText: 'قبول و بازگشت',
+                        customClass: {
+                            confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-teal-100/70 font-bold text-teal-800 text-sm rounded hover:bg-teal-300 transition mt-3",
+                        },
+                    })
                         .then(() => location.reload());
                 });
             }
