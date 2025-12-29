@@ -18,6 +18,17 @@
         </div>
     </div>
     <hr class="border-slate-200">
+    <div class="bg-blue-100/30 rounded-lg border border-blue-200  border-dashed p-2">
+        <div class="flex-1">
+            <div class="flex items-center justify-center gap-4">
+                <form method="get" class="flex items-center gap-2">
+                    <input name="search" value="@(WebUtility.HtmlDecode(Model?.Search ?? ""))" placeholder="نام جلسه بایگانی شده خود را وارد نمایید" class="px-3 py-2 border rounded w-80 text-sm" autocomplete="off" />
+                    <button type="submit" class="inline-block bg-blue-100/70 font-bold text-slate-800 px-3 py-2 rounded hover:bg-blue-200 text-slate-100 transition">جستجو</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
 </div>
 <div class="bg-white rounded-lg p-6">
 
@@ -26,30 +37,16 @@
         @Html.AntiForgeryToken()
     </form>
 
-    <div class="flex items-center justify-between mb-4">
-        <h1 class="text-lg font-semibold">جلسات بایگانی‌شده</h1>
-        <a asp-action="Index" asp-controller="Home" class="px-3 py-2 bg-slate-800 text-slate-100 rounded hover:bg-blue-500 transition">بازگشت</a>
-    </div>
-
-    <form method="get" class="mb-4 flex gap-2">
-        <input type="text"
-               name="search"
-               value="@(WebUtility.HtmlDecode(Model?.Search ?? ""))"
-               placeholder="جستجو در عنوان یا مکان"
-               class="px-3 py-2 border rounded w-72" />
-        <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded">جستجو</button>
-    </form>
-
-    <div class="overflow-x-auto">
+    <div class="bg-slate-100/20 border rounded">
         <table class="min-w-full divide-y divide-slate-100">
-            <thead class="bg-blue-50">
+            <thead class="bg-blue-100/20">
                 <tr>
                     @* <th class="px-3 py-2 text-center">شناسه</th> *@
-                    <th class="px-3 py-2 text-center">عنوان</th>
-                    <th class="px-3 py-2 text-center">تاریخ</th>
-                    <th class="px-3 py-2 text-center">مکان</th>
-                    <th class="px-3 py-2 text-center">بایگانی شده</th>
-                    <th class="px-3 py-2 text-center">عملیات</th>
+                    <th class="px-2 py-2 text-sm font-bold text-center">عنوان</th>
+                    <th class="px-2 py-2 text-sm font-bold text-center">تاریخ</th>
+                    <th class="px-2 py-2 text-sm font-bold text-center">مکان</th>
+                    <th class="px-2 py-2 text-sm font-bold text-center">بایگانی شده</th>
+                    <th class="px-2 py-2 text-sm font-bold text-center">عملیات</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-slate-100">
@@ -67,11 +64,11 @@
                     {
                 <tr>
                     @* <td class="px-3 py-2 text-right">@s.Id</td> *@
-                    <td class="px-3 py-2 text-right">@s.Title</td>
-                    <td class="px-3 py-2 text-right">
+                    <td class="px-2 py-2 text-sm font-bold text-center">@s.Title</td>
+                    <td class="px-2 py-2 text-sm font-bold text-center">
                         @(s.Date.HasValue? s.Date.Value.ToString("yyyy-MM-dd") : "-")
                     </td>
-                    <td class="px-3 py-2 text-right">@((s.Location ?? "-"))</td>
+                    <td class="px-2 py-2 text-sm font-bold text-center">@((s.Location ?? "-"))</td>
 
                     @functions {
                         private string FormatIranTime(DateTime? utc)
@@ -95,24 +92,15 @@
                         }
                     }
 
-                    <td class="px-3 py-2 text-right">@FormatIranTime(s.DeletedAt)</td>
+                    <td class="px-2 py-2 text-sm font-bold text-center">@FormatIranTime(s.DeletedAt)</td>
 
-                    <td class="px-3 py-2 text-center">
-                        <a asp-action="SessionDetails"
-                           asp-route-id="@s.Id"
-                           class="px-3 py-1 bg-slate-100 rounded">
-                            مشاهده
-                        </a>
-
-                        <button type="button"
-                                data-id="@s.Id"
-                                class="unarchive-btn px-3 py-1 bg-emerald-600 text-white rounded ml-2">
-                            بازگردانی
-                        </button>
+                    <td class="px-2 py-2 text-sm text-center">
+                        <a asp-action="SessionDetails" asp-route-id="@s.Id" class="px-2 py-2 font-bold bg-slate-100 rounded"> مشاهده</a>
+                        <button type="button" data-id="@s.Id" class="unarchive-btn px-2 py-2 font-bold bg-teal-100 text-teal-800 rounded ml-2"> بازیابی جلسه جاری </button>
                     </td>
                 </tr>
-                                }
-                                }
+                            }
+                       }
             </tbody>
         </table>
     </div>
@@ -123,12 +111,10 @@
     <script>
         (function () {
             document.addEventListener('DOMContentLoaded', function () {
-
                 function getToken() {
                     const el = document.querySelector('input[name="__RequestVerificationToken"]');
                     return el ? el.value : null;
                 }
-
                 async function post(url, data) {
                     const token = getToken();
                     if (!token) {
@@ -153,7 +139,6 @@
                     const txt = await resp.text();
                     try { return JSON.parse(txt); } catch { return txt; }
                 }
-
                 document.querySelectorAll('.unarchive-btn').forEach(btn => {
                     btn.addEventListener('click', async function () {
 
@@ -209,7 +194,7 @@
                             customClass: {
                                 confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-teal-100/70 font-bold text-teal-800 text-sm rounded hover:bg-teal-300 transition mt-3",
                             },
-                        }).then(() => location.reload());
+                        }) .then(() => location.href = `/Attendance/AllSessions`);
                     });
                 });
             });
