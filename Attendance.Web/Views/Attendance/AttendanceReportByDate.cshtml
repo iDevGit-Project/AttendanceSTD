@@ -1,0 +1,83 @@
+﻿@using Attendance.Data.Entities
+@{
+    ViewData["Title"] = "جستجوی کلیه جلسات ثبت شده";
+}
+<!-- کارت و هدر -->
+<div class="bg-white rounded-lg border p-6 space-y-4">
+    <div class="flex items-center justify-between gap-4">
+        <div>
+            <h1 class="text-lg font-semibold">جستجوی کلیه جلسات ثبت شده در سامانه</h1>
+            <div class="text-sm text-slate-500">نمایش از تاریخ تا تاریخ جلسات ذخیره‌شده در سیستم</div>
+        </div>
+        <div class="flex items-center gap-3">
+            <a asp-action="Index" asp-controller="Home" class="inline-block px-3 py-2 bg-slate-800 text-slate-100 rounded hover:bg-blue-500 transition">بازگشت</a>
+        </div>
+    </div>
+    <hr class="border-slate-200">
+    <div class="bg-slate-100/50 rounded-lg border border-dashed p-2">
+        <div class="flex-1">
+            <div id="sessions-stats" class="grid grid-cols-1 md:grid-cols-3 text-center gap-3 text-sm">
+                <div class="bg-blue-100/50 rounded-lg p-2">
+                    <div class="text-sm font-bold text-blue-800">
+                        <label class="block text-sm mb-1">از تاریخ</label>
+                        <input type="text" id="fromDate" class="px-3 py-2 border rounded w-full text-sm" placeholder="مثلاً 1403/01/01">
+                    </div>
+                </div>
+                <div class="bg-blue-100/50 rounded-lg p-2">
+                    <div class="text-sm font-bold text-blue-800">
+                        <label class="block text-sm mb-1">تا تاریخ</label>
+                        <input type="text" id="toDate" class="px-3 py-2 border rounded w-full text-sm" placeholder="مثلاً 1403/01/31">
+                    </div>
+                </div>
+                <div class="bg-blue-100/50 rounded-lg p-2">
+                    <div class="text-sm font-bold text-rose-800">
+                        <button id="btnLoadReport" class="bg-blue-600 text-white px-2 py-2 rounded text-sm">
+                            مشاهده گزارش
+                        </button>
+                        <button id="btnPrintReport" class="bg-emerald-600 text-white px-2 py-2 rounded text-sm">
+                            خروجی PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-slate-100/20 border rounded">
+        <table class="min-w-full bg-blue-100/20">
+            <thead>
+                <tr>
+                    <th class="px-3 py-2 text-right text-sm">تصویر</th>
+                    <th class="px-3 py-2 text-center text-sm">نام و نام خانوادگی</th>
+                    <th class="px-3 py-2 text-center text-sm">وضعیت حضور</th>
+                </tr>
+            </thead>
+            <tbody id="report-body" class="bg-white divide-y divide-slate-100">
+                @foreach (var r in Model.Records)
+                {
+                    <tr>
+                        <td>
+                            <img src="@(r.Photo ?? "/uploads/students/default.png")"
+                                 class="h-10 w-10 rounded">
+                        </td>
+                        <td>@r.StudentName</td>
+                        <td>
+                            @r.Status
+                            @if (r.Status == AttendanceStatus.Late && r.LateMinutes.HasValue)
+                            {
+                                <span class="text-xs text-orange-600">
+                                    (@r.LateMinutes دقیقه)
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section AttendanceReportByDateStudentsScripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/sessions/allsessions.report.js" asp-append-version="true"></script>
+}

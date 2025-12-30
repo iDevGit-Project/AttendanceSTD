@@ -27,6 +27,67 @@ namespace Attendance.Web.Controllers
             _hub = hub;
         }
 
+        // ---------- GetSessionsStats for view total (GET) ----------
+        [HttpGet]
+        public async Task<IActionResult> GetSessionsStats()
+        {
+            var query = _db.AttendanceSessions.AsNoTracking();
+
+            var total = await query.CountAsync();
+
+            var active = await query.CountAsync(x => x.DeletedAt == null);
+            var archived = await query.CountAsync(x => x.DeletedAt != null);
+
+            var vm = new SessionsStatsViewModel
+            {
+                TotalSessions = total,
+                ActiveSessions = active,
+                ArchivedSessions = archived
+            };
+
+            return Json(vm);
+        }
+
+        // ---------- AttendanceReportByDate for Shamsi Date To Date(GET) ----------
+        [HttpGet]
+        public async Task<IActionResult> AttendanceReportByDate(
+            DateTime? from,
+            DateTime? to
+        )
+        {
+            var vm = new AttendanceReportByDateVm
+            {
+                From = from,
+                To = to,
+                Records = new List<AttendanceReportItemVm>()
+            };
+
+            if (from.HasValue && to.HasValue)
+            {
+                var list =
+                    await _db.AttendanceRecords
+                        .Include(r => r.Student)
+                        .Include(r => r.Session)
+                        .Where(r =>
+                            r.Session.Date >= from.Value &&
+                            r.Session.Date <= to.Value
+                        )
+                        .AsNoTracking()
+                        .ToListAsync();
+
+                vm.Records = list.Select(r => new AttendanceReportItemVm
+                {
+                    StudentName =
+                        (r.Student.FirstName + " " + r.Student.LastName),
+                    Photo = r.Student.PhotoPath,
+                    Status = r.Status,
+                    LateMinutes = r.LateMinutes
+                }).ToList();
+            }
+
+            return View(vm);
+        }
+
         // ---------- CreateWizard (GET) ----------
         [HttpGet]
         public async Task<IActionResult> CreateWizard()

@@ -45,29 +45,29 @@
     <div class="bg-slate-100/50 rounded-lg border border-dashed p-2">
         <div class="flex-1">
             <div class="grid grid-cols-1 md:grid-cols-3 text-center gap-3 text-sm">
-                <div class="bg-cyan-200/50 rounded-lg p-2">
-                    <div class="text-sm text-cyan-750">
+                <div class="bg-blue-100/50 rounded-lg p-2">
+                    <div class="text-sm font-bold text-blue-800">
                         تعداد کل دانش‌آموزان:
-                        <span class="font-bold text-slate-700"> @Model.TotalStudents نفر</span>
+                        <span class="font-bold text-blue-800"> @Model.TotalStudents نفر</span>
                     </div>
                 </div>
-                <div class="bg-teal-100 rounded-lg p-2">
-                    <div class="text-sm text-teal-800">
+                <div class="bg-blue-100/50 rounded-lg p-2">
+                    <div class="text-sm font-bold text-blue-800">
                         تعداد دانش‌آموزان فعال:
-                        <span class="font-bold text-teal-700"> @Model.ActiveStudents نفر</span>
+                        <span class="font-bold text-blue-800"> @Model.ActiveStudents نفر</span>
                     </div>
                 </div>
-                <div class="bg-rose-100 rounded-lg p-2">
-                    <div class="text-sm text-rose-800">
+                <div class="bg-rose-100/50 rounded-lg p-2">
+                    <div class="text-sm font-bold text-rose-800">
                         تعداد دانش‌آموزان غیرفعال:
-                        <span class="font-bold text-rose-700"> @Model.InactiveStudents نفر</span>
+                        <span class="font-bold text-rose-800"> @Model.InactiveStudents نفر</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="bg-blue-100/30 rounded-lg border border-blue-200  border-dashed p-2">
+    <div class="bg-blue-100/50 rounded-lg border border-blue-200  border-dashed p-2">
         <div class="flex-1">
             <div class="flex items-center justify-center gap-4">
                 <input id="studentSearchInput" type="search" class="px-3 py-2 border rounded w-80 text-sm" placeholder="جستجو بر اساس : " />
@@ -100,9 +100,9 @@
         <div id="server-error" data-message="@error"></div>
     }
 
-    <div class="bg-slate-100/20 border rounded">
+    <div class="bg-slate-100/50 border rounded">
         <table class="min-w-full divide-y divide-slate-100">
-            <thead class="bg-blue-100/20">
+            <thead class="bg-blue-100/50">
                 <tr>
                     <th class="px-2 py-2 align-middle text-right text-sm font-bold text-slate-700">تصویر</th>
                     <th class="px-2 py-2 align-middle text-center text-sm font-bold text-slate-700">نام</th>
@@ -358,8 +358,6 @@
         // ========== نمایش TempData.Notify (فقط در این صفحه: Index) ==========
         (function showTempDataNotifyOnIndex() {
             try {
-                // 1) Try to read TempData["Notify"] if controller set JSON there.
-                // Use Html.Raw so Razor won't HTML-encode the already-serialized JSON.
                 const rawNotify = @Html.Raw(TempData["Notify"] ?? "null");
 
                 if (rawNotify) {
@@ -477,7 +475,7 @@
                     cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
                     confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-rose-100/70 font-bold text-rose-800 text-sm rounded hover:bg-rose-200 transition mt-3",
                 },
-                reverseButtons: true,
+                reverseButtons: false,
                 preConfirm: (value) => {
                     if (!value || !value.trim()) {
                         // showValidationMessage accepts plain string or HTML; we supply safe text-styled HTML block
