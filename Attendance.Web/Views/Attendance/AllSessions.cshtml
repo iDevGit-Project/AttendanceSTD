@@ -44,34 +44,6 @@
             </div>
         </div>
     </div>
-    <div class="bg-slate-100/50 rounded-lg border border-dashed p-2">
-        <div class="flex-1">
-            <div id="sessions-stats" class="grid grid-cols-1 md:grid-cols-3 text-center gap-3 text-sm">
-                <div class="bg-blue-100/50 rounded-lg p-2">
-                    <div class="text-sm font-bold text-blue-800">
-                        <label class="block text-sm mb-1">از تاریخ</label>
-                        <input type="text" id="fromDate" class="px-3 py-2 border rounded w-full text-sm" placeholder="مثلاً 1403/01/01">
-                    </div>
-                </div>
-                <div class="bg-blue-100/50 rounded-lg p-2">
-                    <div class="text-sm font-bold text-blue-800">
-                        <label class="block text-sm mb-1">تا تاریخ</label>
-                        <input type="text" id="toDate" class="px-3 py-2 border rounded w-full text-sm" placeholder="مثلاً 1403/01/31">
-                    </div>
-                </div>
-                <div class="bg-blue-100/50 rounded-lg p-2">
-                    <div class="text-sm font-bold text-rose-800">
-                        <button id="btnLoadReport" class="bg-blue-600 text-white px-2 py-2 rounded text-sm">
-                            مشاهده گزارش
-                        </button>
-                        <button id="btnPrintReport" class="bg-emerald-600 text-white px-2 py-2 rounded text-sm">
-                            خروجی PDF
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     <div class="bg-blue-100/30 rounded-lg border border-blue-200  border-dashed p-2">
         <div class="flex-1">
             <div class="flex items-center justify-center gap-4">
@@ -249,7 +221,6 @@
 
 @section AllSessionsStudentsScripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="~/js/sessions/allsessions.report.js" asp-append-version="true"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const pageSizeSelector = document.getElementById("pageSizeSelector");

@@ -553,11 +553,6 @@
             if (!m) return null;
             return { year: parseInt(m[1],10), month: parseInt(m[2],10), day: parseInt(m[3],10) };
           }
-
-          // compute current shamsi year approx by using known mapping
-          // Because we don't rely on external conversion, approximate current shamsi year:
-          // We'll derive from Gregorian date using a simple algorithm for range of years (good enough for choosing year dropdown).
-          // Note: We don't need perfect conversion for the picker's year list, just get current year in SHAMS (approx).
           function getCurrentShamsiYear() {
             // Simple conversion using Date -> toLocaleDateString with fa-IR if available in browser:
             try {

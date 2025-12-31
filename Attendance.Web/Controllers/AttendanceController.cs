@@ -50,10 +50,7 @@ namespace Attendance.Web.Controllers
 
         // ---------- AttendanceReportByDate for Shamsi Date To Date(GET) ----------
         [HttpGet]
-        public async Task<IActionResult> AttendanceReportByDate(
-            DateTime? from,
-            DateTime? to
-        )
+        public async Task<IActionResult> AttendanceReportByDate( DateTime? from, DateTime? to)
         {
             var vm = new AttendanceReportByDateVm
             {
