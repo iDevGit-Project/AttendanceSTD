@@ -88,13 +88,6 @@ namespace Attendance.Data.Entities
         public ICollection<AttendanceRecord> Records { get; set; } = new List<AttendanceRecord>();
 
         // --- Convenience helpers (اختیاری ولی مفید) ---
-        // اگر جای دیگری از کد SessionDate یا Grade یا CreatedBy به‌صورت string استفاده شده باشد
-        // باید آن کدها را نیز اصلاح کنیم؛ فعلاً فقط هدر توضیح گذاشتم تا بدانید این مدل دیگر
-        // propertyهایی مثل SessionDate/Grade/CreatedBy (string) را ندارد و باید از ستون‌های بالا استفاده کنید.
-
-        /// <summary>
-        /// برگشت تاریخ و زمان شروع جلسه (اگر StartAt موجود باشد، آن را بازمی‌گرداند؛ در غیر اینصورت اگر Date باشد،
-        /// Date را با زمان 00:00 بازمی‌گرداند). به عنوان یک هِلپر مفید در View/Controller.
         /// </summary>
         [NotMapped]
         public DateTime? SessionStart

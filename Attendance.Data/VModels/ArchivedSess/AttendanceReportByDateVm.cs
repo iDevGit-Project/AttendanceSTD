@@ -9,9 +9,11 @@ namespace Attendance.Data.VModels.ArchivedSess
 {
     public class AttendanceReportItemVm
     {
-        public string StudentName { get; set; }
-        public string? Photo { get; set; }
-        public AttendanceStatus Status { get; set; }
-        public int? LateMinutes { get; set; }
+        public int StudentId { get; set; }
+        public string FullName { get; set; }
+        public string ImagePath { get; set; }
+        public bool IsPresent { get; set; }
+        public int? DelayMinutes { get; set; }
     }
+
 }

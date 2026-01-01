@@ -15,7 +15,6 @@ namespace Attendance.Data.Entities
         // SessionId باید نوعش long باشد چون AttendanceSession.Id از نوع long است
         public long SessionId { get; set; }
         public AttendanceSession? Session { get; set; }
-
         public int StudentId { get; set; }
         public Student? Student { get; set; }
 

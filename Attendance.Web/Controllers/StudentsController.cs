@@ -260,30 +260,30 @@ namespace Attendance.Web.Controllers
             }
 
             // 2) اعتبارسنجی و پارس تاریخ‌های شمسی (BirthDateShamsi و EntryDateShamsi)
-            DateTime? birthDateUtc = null;
-            DateTime? entryDateUtc = null;
+            DateTime? birthDate = null;
+            DateTime? entryDate = null;
 
             if (!string.IsNullOrWhiteSpace(model.BirthDateShamsi))
             {
-                if (!PersianDateConverter.TryParseShamsiToUtc(model.BirthDateShamsi.Trim(), out var bd))
+                if (!PersianDateConverter.TryParseShamsiToDate(model.BirthDateShamsi.Trim(), out var bd))
                 {
                     ModelState.AddModelError(nameof(model.BirthDateShamsi), "فرمت تاریخ تولد نامعتبر است — از قالب YYYY/MM/DD استفاده کنید (مثال: 1389/02/25).");
                 }
                 else
                 {
-                    birthDateUtc = bd;
+                    birthDate = bd;
                 }
             }
 
             if (!string.IsNullOrWhiteSpace(model.EntryDateShamsi))
             {
-                if (!PersianDateConverter.TryParseShamsiToUtc(model.EntryDateShamsi.Trim(), out var ed))
+                if (!PersianDateConverter.TryParseShamsiToDate(model.EntryDateShamsi.Trim(), out var ed))
                 {
                     ModelState.AddModelError(nameof(model.EntryDateShamsi), "فرمت تاریخ ورود نامعتبر است — از قالب YYYY/MM/DD استفاده کنید (مثال: 1403/07/01).");
                 }
                 else
                 {
-                    entryDateUtc = ed;
+                    entryDate = ed;
                 }
             }
 
@@ -370,8 +370,8 @@ namespace Attendance.Web.Controllers
                 // === new fields ===
                 PaymentStatus = model.PaymentStatus,
                 // تاریخ‌ها (در صورت وجود)
-                BirthDate = birthDateUtc,
-                EntryDate = entryDateUtc
+                BirthDate = birthDate,
+                EntryDate = entryDate
                 // DeletedAt, DeletedBy, RowVersion, Attendances handled by DB or left null
             };
 
@@ -671,7 +671,7 @@ namespace Attendance.Web.Controllers
             if (model.BirthYear.HasValue && model.BirthMonth.HasValue && model.BirthDay.HasValue)
             {
                 var sh = $"{model.BirthYear.Value:0000}/{model.BirthMonth.Value:00}/{model.BirthDay.Value:00}";
-                newBirth = PersianDateConverter.ParseShamsiToUtc(sh);
+                newBirth = PersianDateConverter.ParseShamsiToDate(sh);
             }
 
             DateTime? newEntry = null;
@@ -679,7 +679,7 @@ namespace Attendance.Web.Controllers
             if (model.EntryYear.HasValue && model.EntryMonth.HasValue && model.EntryDay.HasValue)
             {
                 var sh = $"{model.EntryYear.Value:0000}/{model.EntryMonth.Value:00}/{model.EntryDay.Value:00}";
-                newEntry = PersianDateConverter.ParseShamsiToUtc(sh);
+                newEntry = PersianDateConverter.ParseShamsiToDate(sh);
             }
 
             item.BirthDate = newBirth;

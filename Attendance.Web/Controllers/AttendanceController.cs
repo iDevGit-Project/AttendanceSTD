@@ -49,43 +49,39 @@ namespace Attendance.Web.Controllers
         }
 
         // ---------- AttendanceReportByDate for Shamsi Date To Date(GET) ----------
-        [HttpGet]
-        public async Task<IActionResult> AttendanceReportByDate( DateTime? from, DateTime? to)
-        {
-            var vm = new AttendanceReportByDateVm
-            {
-                From = from,
-                To = to,
-                Records = new List<AttendanceReportItemVm>()
-            };
+        //[HttpGet]
+        //public IActionResult AttendanceReportByDate()
+        //{
+        //    return View(new AttendanceReportByDateVm());
+        //}
 
-            if (from.HasValue && to.HasValue)
-            {
-                var list =
-                    await _db.AttendanceRecords
-                        .Include(r => r.Student)
-                        .Include(r => r.Session)
-                        .Where(r =>
-                            r.Session.Date >= from.Value &&
-                            r.Session.Date <= to.Value
-                        )
-                        .AsNoTracking()
-                        .ToListAsync();
+        //[HttpPost]
+        //public IActionResult AttendanceReportByDate(DateTime fromDate, DateTime toDate)
+        //{
+        //    var data = _db.AttendanceRecords
+        //        .Include(x => x.Student)
+        //        .Include(x => x.Session)
+        //        .Where(x =>
+        //            x.Session != null &&
+        //            x.Session.CreatedAt >= fromDate &&
+        //            x.Session.CreatedAt <= toDate
+        //        )
+        //        .Select(x => new AttendanceReportItemVm
+        //        {
+        //            StudentId = x.StudentId,
+        //            FullName = x.Student!.FirstName + " " + x.Student.LastName,
+        //            ImagePath = x.Student.PhotoPath,
+        //            IsPresent = x.Status,
+        //            DelayMinutes = x.LateMinutes
+        //        })
+        //        .ToList();
 
-                vm.Records = list.Select(r => new AttendanceReportItemVm
-                {
-                    StudentName =
-                        (r.Student.FirstName + " " + r.Student.LastName),
-                    Photo = r.Student.PhotoPath,
-                    Status = r.Status,
-                    LateMinutes = r.LateMinutes
-                }).ToList();
-            }
+        //    return View(data);
+        //}
 
-            return View(vm);
-        }
 
         // ---------- CreateWizard (GET) ----------
+
         [HttpGet]
         public async Task<IActionResult> CreateWizard()
         {
@@ -227,7 +223,7 @@ namespace Attendance.Web.Controllers
             try
             {
                 // تبدیل تاریخ شمسی به UTC (تابع شما)
-                DateTime sessionUtc = PersianDateConverter.ParseShamsiToUtc(dateShamsi) ?? DateTime.UtcNow;
+                DateTime sessionUtc = PersianDateConverter.ParseShamsiToDate(dateShamsi);
 
                 // ایجاد نمونه جدید و نگاشت به ستون‌های جدول شما
                 var session = new AttendanceSession();
@@ -529,251 +525,6 @@ namespace Attendance.Web.Controllers
                 return StatusCode(500, new { error = "خطای غیرمنتظره", message = ex.Message });
             }
         }
-
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> SaveAttendance()
-        //{
-        //    _logger?.LogInformation(
-        //        "SaveAttendance called by {User}",
-        //        User?.Identity?.Name
-        //    );
-
-        //    // ---------------- دریافت Form ----------------
-        //    var form = Request.HasFormContentType ? Request.Form : null;
-        //    if (form == null)
-        //    {
-        //        _logger?.LogWarning("SaveAttendance: no form data");
-        //        return BadRequest(new { error = "داده‌ای از کلاینت ارسال نشده است." });
-        //    }
-
-        //    // ---------------- sessionId ----------------
-        //    if (!form.TryGetValue("sessionId", out var sidVal) ||
-        //        !long.TryParse(sidVal.FirstOrDefault(), out var sessionId) ||
-        //        sessionId <= 0)
-        //    {
-        //        _logger?.LogWarning("SaveAttendance: invalid sessionId");
-        //        return BadRequest(new { error = "sessionId نامعتبر است." });
-        //    }
-
-        //    _logger?.LogInformation(
-        //        "SaveAttendance for sessionId={SessionId}",
-        //        sessionId
-        //    );
-
-        //    // ---------------- دریافت records ----------------
-        //    var recordsValues = new List<string>();
-
-        //    if (form.TryGetValue("records[]", out var arr1) && arr1.Count > 0)
-        //    {
-        //        recordsValues.AddRange(arr1.ToArray());
-        //    }
-        //    else if (form.TryGetValue("records", out var arr2) && arr2.Count > 0)
-        //    {
-        //        if (arr2.Count == 1 && arr2[0].TrimStart().StartsWith("["))
-        //            recordsValues.Add(arr2[0]);
-        //        else
-        //            recordsValues.AddRange(arr2.ToArray());
-        //    }
-        //    else
-        //    {
-        //        foreach (var key in form.Keys)
-        //        {
-        //            if (key.StartsWith("records", StringComparison.OrdinalIgnoreCase))
-        //                recordsValues.AddRange(form[key].ToArray());
-        //        }
-        //    }
-
-        //    if (!recordsValues.Any())
-        //    {
-        //        _logger?.LogWarning("SaveAttendance: no records payload");
-        //        return BadRequest(new { error = "هیچ رکوردی ارسال نشده است." });
-        //    }
-
-        //    // ---------------- Deserialize ----------------
-        //    List<RecordDto> payload;
-        //    try
-        //    {
-        //        if (recordsValues.Count == 1 &&
-        //            recordsValues[0].TrimStart().StartsWith("["))
-        //        {
-        //            payload =
-        //                System.Text.Json.JsonSerializer.Deserialize<List<RecordDto>>(
-        //                    recordsValues[0],
-        //                    new System.Text.Json.JsonSerializerOptions
-        //                    {
-        //                        PropertyNameCaseInsensitive = true
-        //                    }
-        //                ) ?? new List<RecordDto>();
-        //        }
-        //        else
-        //        {
-        //            payload = new List<RecordDto>();
-
-        //            foreach (var rv in recordsValues)
-        //            {
-        //                if (string.IsNullOrWhiteSpace(rv))
-        //                    continue;
-
-        //                var dto =
-        //                    System.Text.Json.JsonSerializer.Deserialize<RecordDto>(
-        //                        rv,
-        //                        new System.Text.Json.JsonSerializerOptions
-        //                        {
-        //                            PropertyNameCaseInsensitive = true
-        //                        }
-        //                    );
-
-        //                if (dto != null)
-        //                    payload.Add(dto);
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger?.LogError(ex, "SaveAttendance: invalid JSON payload");
-        //        return BadRequest(new { error = "فرمت رکوردها نامعتبر است." });
-        //    }
-
-        //    // ---------------- دریافت Session ----------------
-        //    var session =
-        //        await _db.AttendanceSessions
-        //                 .Include(s => s.Records)
-        //                 .FirstOrDefaultAsync(s => s.Id == sessionId);
-
-        //    if (session == null)
-        //    {
-        //        _logger?.LogWarning(
-        //            "SaveAttendance: session not found id={SessionId}",
-        //            sessionId
-        //        );
-        //        return NotFound(new { error = "جلسه پیدا نشد." });
-        //    }
-
-        //    // ---------------- ذخیره ----------------
-        //    try
-        //    {
-        //        foreach (var dto in payload)
-        //        {
-        //            byte statusByte = 0;
-        //            bool statusValid;
-
-        //            try
-        //            {
-        //                statusByte = Convert.ToByte(dto.status);
-        //                statusValid = Enum.IsDefined(typeof(AttendanceStatus), statusByte);
-        //            }
-        //            catch
-        //            {
-        //                statusValid = false;
-        //            }
-
-        //            AttendanceStatus finalStatus;
-        //            int? finalLateMinutes;
-
-        //            // ---- منطق اصلی ----
-        //            if (!statusValid)
-        //            {
-        //                finalStatus = AttendanceStatus.Late;
-        //                finalLateMinutes = 60;
-        //            }
-        //            else
-        //            {
-        //                finalStatus = (AttendanceStatus)statusByte;
-
-        //                if (finalStatus == AttendanceStatus.Late)
-        //                {
-        //                    finalLateMinutes =
-        //                        dto.lateMinutes.HasValue && dto.lateMinutes > 0
-        //                            ? dto.lateMinutes
-        //                            : 60;
-        //                }
-        //                else
-        //                {
-        //                    finalLateMinutes = null;
-        //                }
-        //            }
-
-        //            // ---- Update / Insert ----
-        //            if (dto.recordId.HasValue)
-        //            {
-        //                var rec =
-        //                    session.Records.FirstOrDefault(
-        //                        r => r.Id == dto.recordId.Value
-        //                    );
-
-        //                if (rec != null)
-        //                {
-        //                    rec.Status = finalStatus;
-        //                    rec.Note = dto.note;
-        //                    rec.LateMinutes = finalLateMinutes;
-        //                }
-        //                else
-        //                {
-        //                    _logger?.LogWarning(
-        //                        "SaveAttendance: record id {RecordId} not found in session {SessionId}",
-        //                        dto.recordId,
-        //                        sessionId
-        //                    );
-        //                }
-        //            }
-        //            else
-        //            {
-        //                session.Records.Add(
-        //                    new AttendanceRecord
-        //                    {
-        //                        StudentId = dto.studentId,
-        //                        Status = finalStatus,
-        //                        Note = dto.note,
-        //                        LateMinutes = finalLateMinutes,
-        //                        CreatedAt = DateTime.UtcNow
-        //                    }
-        //                );
-        //            }
-        //        }
-
-        //        await _db.SaveChangesAsync();
-
-        //        _logger?.LogInformation(
-        //            "SaveAttendance: saved {Count} records for session {SessionId}",
-        //            payload.Count,
-        //            sessionId
-        //        );
-
-        //        return Ok(new { message = "حضور/غیاب ذخیره شد" });
-        //    }
-        //    catch (DbUpdateException dex)
-        //    {
-        //        _logger?.LogError(
-        //            dex,
-        //            "SaveAttendance: db error for session {SessionId}",
-        //            sessionId
-        //        );
-
-        //        return StatusCode(
-        //            500,
-        //            new { error = "خطا در ذخیره‌سازی", details = dex.Message }
-        //        );
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger?.LogError(
-        //            ex,
-        //            "SaveAttendance: unexpected error for session {SessionId}",
-        //            sessionId
-        //        );
-
-        //        return StatusCode(
-        //            500,
-        //            new
-        //            {
-        //                error = "خطای غیرمنتظره در ذخیره‌سازی",
-        //                message = ex.Message,
-        //                inner = ex.InnerException?.Message
-        //            }
-        //        );
-        //    }
-        //}
         public class RecordDto
         {
             public int? recordId { get; set; }

@@ -9,8 +9,9 @@ namespace Attendance.Data.VModels.ArchivedSess
 {
     public class AttendanceReportByDateVm
     {
-        public DateTime? From { get; set; }
-        public DateTime? To { get; set; }
-        public List<AttendanceReportItemVm> Records { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public List<AttendanceReportItemVm> Items { get; set; } = new();
     }
+
 }
