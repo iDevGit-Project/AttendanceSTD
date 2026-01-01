@@ -127458,3 +127458,48 @@ video {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+.sh-datepicker {
+    position: absolute;
+    z-index: 999999;
+    background: white;
+    border: 1px solid rgba(15,23,42,0.06);
+    box-shadow: 0 8px 24px rgba(2,6,23,0.08);
+    padding: 10px;
+    border-radius: 8px;
+    min-width: 260px;
+    direction: rtl;
+}
+
+    .sh-datepicker .row {
+        display: flex;
+        gap: 8px;
+    }
+
+    .sh-datepicker select {
+        flex: 1;
+        padding: 6px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .sh-datepicker .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .sh-datepicker button {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: bold;
+    }
+
+.btn-ok {
+    background: #0ea5a0;
+    color: #fff;
+}
+
+.btn-cancel {
+    background: #f1f5f9;
+}
