@@ -255,32 +255,92 @@
                 step1.classList.remove('hidden');
             };
 
+            /* ================== Swal Meta (UPDATED) ================== */
+                async function askSessionMeta() {
+                    const r = await Swal.fire({
+                        title: 'اطلاعات جلسه',
+                        html: `
+                            <input id="session-title" class="swal2-input" placeholder="نام جلسه را وارد نمایید">
+
+                            <input id="session-location" class="swal2-input" placeholder="مکان برگزاری جلسه را وارد نمایید">
+
+                            <div class="flex gap-2 items-center justify-center mt-2">
+                                <input id="session-time" type="time" class="swal2-input" style="width: 160px">
+
+                                <select id="session-period" class="swal2-input" style="width: 120px">
+                                    <option value="">---</option>
+                                    <option value="morning">صبح</option>
+                                    <option value="evening">عصر</option>
+                                </select>
+                            </div>
+                        `,
+                        preConfirm: () => {
+                            const title = document.getElementById('session-title').value.trim();
+                            const location = document.getElementById('session-location').value.trim();
+                            const time = document.getElementById('session-time').value;
+                            const period = document.getElementById('session-period').value;
+
+                            if (!title) {
+                                Swal.showValidationMessage('نام جلسه الزامی است');
+                                return false;
+                            }
+                            if (!location) {
+                                Swal.showValidationMessage('مکان برگزاری جلسه الزامی است');
+                                return false;
+                            }
+                            if (!time) {
+                                Swal.showValidationMessage('ساعت برگزاری جلسه را انتخاب کنید');
+                                return false;
+                            }
+
+                            return {
+                                title,
+                                location,
+                                startTime: time,
+                                period
+                            };
+                        },
+                        allowOutsideClick: false,
+                        allowEscapeKey: true,
+                        showCancelButton: true,
+                        buttonsStyling: false,
+                        confirmButtonText: 'تأیید و ادامه',
+                        cancelButtonText: 'انصراف و بازگشت',
+                        customClass: {
+                            cancelButton: "inline-block w-full px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+                            confirmButton: "inline-block w-full px-3 py-2 bg-teal-100/70 font-bold text-teal-800 text-sm rounded hover:bg-teal-300 transition mt-3",
+                        },
+                    });
+
+                    return r.isConfirmed ? r.value : null;
+                }
+
             /* ================== Swal Meta ================== */
-            async function askSessionMeta() {
-                const r = await Swal.fire({
-                    title: 'اطلاعات جلسه',
-                    html: `
-                        <input id="loc" class="swal2-input" placeholder="مکان">
-                        <input id="time" type="time" class="swal2-input">
-                    `,
-                    preConfirm: () => ({
-                        location: document.getElementById('loc').value,
-                        startTime: document.getElementById('time').value
-                    }),
-                    allowOutsideClick: false,
-                    animation: true,
-                    allowEscapeKey: true,
-                    showCancelButton: true,
-                    buttonsStyling: false,
-                    confirmButtonText: 'تأیید و ادامه',
-                    cancelButtonText: 'انصراف و بازگشت',
-                    customClass: {
-                        cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
-                        confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-teal-100/70 font-bold text-teal-800 text-sm rounded hover:bg-teal-300 transition mt-3",
-                    },
-                });
-                return r.isConfirmed ? r.value : null;
-            }
+            // async function askSessionMeta() {
+            //     const r = await Swal.fire({
+            //         title: 'اطلاعات جلسه',
+            //         html: `
+            //             <input id="loc" class="swal2-input" placeholder="مکان">
+            //             <input id="time" type="time" class="swal2-input">
+            //         `,
+            //         preConfirm: () => ({
+            //             location: document.getElementById('loc').value,
+            //             startTime: document.getElementById('time').value
+            //         }),
+            //         allowOutsideClick: false,
+            //         animation: true,
+            //         allowEscapeKey: true,
+            //         showCancelButton: true,
+            //         buttonsStyling: false,
+            //         confirmButtonText: 'تأیید و ادامه',
+            //         cancelButtonText: 'انصراف و بازگشت',
+            //         customClass: {
+            //             cancelButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+            //             confirmButton: "inline-block w-full justify-between gap-4 px-3 py-2 bg-teal-100/70 font-bold text-teal-800 text-sm rounded hover:bg-teal-300 transition mt-3",
+            //         },
+            //     });
+            //     return r.isConfirmed ? r.value : null;
+            // }
 
             /* ================== FINAL SAVE ================== */
             toStep3Btn.onclick = async () => {
@@ -315,11 +375,18 @@
                 // ...
                 const fd = new FormData();
                 fd.append('__RequestVerificationToken', getAntiForgeryToken());
-                fd.append('title', 'جلسه حضور و غیاب');
+                // fd.append('title', 'جلسه حضور و غیاب');
+                // fd.append('dateShamsi', getTodayShamsi());
+                // fd.append('grade', mode === 'byGrade' ? selectedGrade : 'ALL');
+                // fd.append('location', meta.location);
+                // fd.append('startTime', meta.startTime);
+
+                fd.append('title', meta.title);          // ← از Swal
                 fd.append('dateShamsi', getTodayShamsi());
                 fd.append('grade', mode === 'byGrade' ? selectedGrade : 'ALL');
-                fd.append('location', meta.location);
-                fd.append('startTime', meta.startTime);
+                fd.append('location', meta.location);    // ← از Swal
+                fd.append('startTime', meta.startTime);  // ← ساعت
+                fd.append('period', meta.period);        // ← صبح / عصر
 
                 selectedStudentIds.forEach(id => fd.append('studentIds', id));
 

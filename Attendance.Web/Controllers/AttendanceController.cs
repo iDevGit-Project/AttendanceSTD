@@ -132,7 +132,6 @@ namespace Attendance.Web.Controllers
             return Json(grades);
         }
 
-
         // ---------- GET - GetAllStudents ----------
         [HttpGet]
         public async Task<IActionResult> GetAllStudents()
