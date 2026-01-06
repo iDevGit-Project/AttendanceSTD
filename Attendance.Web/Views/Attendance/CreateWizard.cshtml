@@ -91,6 +91,291 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         (function () {
+
+            /* ================== DOM ================== */
+            const step1 = document.getElementById('step-1');
+            const step2 = document.getElementById('step-2');
+            const toStep2Btn = document.getElementById('to-step-2');
+            const toStep3Btn = document.getElementById('to-step-3');
+            const backBtn = document.getElementById('back-to-step-1');
+            const selectAllBtn = document.getElementById('select-all');
+            const deselectAllBtn = document.getElementById('deselect-all');
+            const gradeTabsContainer = document.getElementById('grade-tabs');
+            const studentsContainer = document.getElementById('students-container');
+            const modeRadios = document.querySelectorAll('input[name="mode"]');
+
+            /* ================== STATE ================== */
+            let mode = 'byGrade';
+            let selectedGrade = null;
+            const selectedStudentIds = new Set();
+            const cache = {};
+
+            /* ================== AntiForgery ================== */
+            function getAntiForgeryToken() {
+                const el = document.querySelector('input[name="__RequestVerificationToken"]');
+                return el ? el.value : null;
+            }
+
+            /* ================== Mode Change ================== */
+            modeRadios.forEach(r => {
+                r.addEventListener('change', () => {
+                    mode = r.value;
+                    selectedGrade = null;
+                    gradeTabsContainer.innerHTML = '';
+                    studentsContainer.innerHTML = '';
+                    selectedStudentIds.clear();
+                    updateSelectedCount();
+                });
+            });
+
+            /* ================== Select / Deselect ================== */
+            selectAllBtn.onclick = () => {
+                studentsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = true;
+                    selectedStudentIds.add(Number(cb.value));
+                });
+                updateSelectedCount();
+            };
+
+            deselectAllBtn.onclick = () => {
+                studentsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = false;
+                    selectedStudentIds.delete(Number(cb.value));
+                });
+                updateSelectedCount();
+            };
+
+            /* ================== Load Data ================== */
+            async function loadGrades() {
+                const r = await fetch('@Url.Action("GetGrades", "Attendance")');
+                return await r.json();
+            }
+
+            async function loadStudentsByGrade(g) {
+                if (cache[g]) return cache[g];
+                const r = await fetch('@Url.Action("GetStudentsByGrade", "Attendance")?grade=' + encodeURIComponent(g));
+                return cache[g] = await r.json();
+            }
+
+            async function loadAllStudents() {
+                if (cache.ALL) return cache.ALL;
+                const r = await fetch('@Url.Action("GetAllStudents", "Attendance")');
+                return cache.ALL = await r.json();
+            }
+
+            /* ================== Render ================== */
+            function renderGradeTabs(grades) {
+                gradeTabsContainer.innerHTML = '';
+                grades.forEach(g => {
+                    const btn = document.createElement('button');
+                    btn.textContent = `پایه ${g}`;
+                    btn.className = 'px-3 py-1 rounded bg-slate-100 hover:bg-slate-200';
+                    btn.onclick = async () => {
+                        selectedGrade = g;
+                        renderStudents(await loadStudentsByGrade(g));
+                    };
+                    gradeTabsContainer.appendChild(btn);
+                });
+            }
+
+            function renderStudents(list) {
+                studentsContainer.innerHTML = '';
+                list.forEach(s => {
+                    const id = Number(s.id);
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center gap-3 p-2 border border-dashed rounded cursor-pointer';
+
+                    label.innerHTML = `
+                        <input type="checkbox" value="${id}">
+                        <img src="${s.photo || '/uploads/students/default.png'}" class="w-10 h-10 rounded">
+                        <div>
+                            <div class="font-bold">${s.firstName} ${s.lastName}</div>
+                            <div class="text-xs">${s.nationalCode || ''}</div>
+                        </div>
+                    `;
+
+                    label.querySelector('input').onchange = e => {
+                        e.target.checked ? selectedStudentIds.add(id) : selectedStudentIds.delete(id);
+                        updateSelectedCount();
+                    };
+
+                    studentsContainer.appendChild(label);
+                });
+            }
+
+            function updateSelectedCount() {
+                const el = document.getElementById('selected-count');
+                if (el) el.textContent = selectedStudentIds.size;
+            }
+
+            /* ================== Step Navigation ================== */
+            toStep2Btn.onclick = async () => {
+                Swal.showLoading();
+                try {
+                    mode === 'byGrade'
+                        ? renderGradeTabs(await loadGrades())
+                        : renderStudents(await loadAllStudents());
+
+                    step1.classList.add('hidden');
+                    step2.classList.remove('hidden');
+                } catch {
+                    Swal.fire('خطا', 'دریافت اطلاعات ناموفق بود', 'error');
+                }
+                Swal.close();
+            };
+
+            backBtn.onclick = () => {
+                step2.classList.add('hidden');
+                step1.classList.remove('hidden');
+            };
+
+            /* ================== Swal Meta (FINAL – with Period) ================== */
+            async function askSessionMeta() {
+                const r = await Swal.fire({
+                    title: 'اطلاعات جلسه',
+                    html: `
+                        <input id="session-title" class="swal2-input" placeholder="نام جلسه را وارد نمایید">
+
+                        <input id="session-location" class="swal2-input" placeholder="مکان برگزاری جلسه را وارد نمایید">
+
+                        <div class="flex gap-2 justify-center mt-2">
+                            <input id="session-time"
+                                   type="time"
+                                   class="swal2-input"
+                                   style="width:160px"
+                                   step="60">
+                        </div>
+
+                        <div class="flex gap-4 justify-center mt-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="session-period" value="Morning">
+                                <span>☀️ صبح</span>
+                            </label>
+
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="session-period" value="Evening">
+                                <span>🌙 عصر</span>
+                            </label>
+                        </div>
+                    `,
+                    preConfirm: () => {
+                        const title = document.getElementById('session-title').value.trim();
+                        const location = document.getElementById('session-location').value.trim();
+                        const time = document.getElementById('session-time').value;
+                        const period = document.querySelector('input[name="session-period"]:checked')?.value;
+
+                        if (!title) {
+                            Swal.showValidationMessage('نام جلسه الزامی است');
+                            return false;
+                        }
+
+                        if (!location) {
+                            Swal.showValidationMessage('مکان برگزاری جلسه الزامی است');
+                            return false;
+                        }
+
+                        if (!time) {
+                            Swal.showValidationMessage('ساعت برگزاری جلسه را انتخاب کنید');
+                            return false;
+                        }
+
+                        if (!period) {
+                            Swal.showValidationMessage('بازه زمانی (صبح یا عصر) را انتخاب کنید');
+                            return false;
+                        }
+
+                        return {
+                            title,
+                            location,
+                            startTime: time,   // HH:mm
+                            period             // Morning | Evening
+                        };
+                    },
+                    allowOutsideClick: false,
+                    allowEscapeKey: true,
+                    showCancelButton: true,
+                    buttonsStyling: false,
+                    confirmButtonText: 'تأیید و ادامه',
+                    cancelButtonText: 'انصراف',
+                    customClass: {
+                        cancelButton:
+                            "inline-block w-full px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
+                        confirmButton:
+                            "inline-block w-full px-3 py-2 bg-teal-100/70 font-bold text-teal-800 text-sm rounded hover:bg-teal-300 transition mt-3",
+                    },
+                });
+
+                return r.isConfirmed ? r.value : null;
+            }
+
+            /* ================== Swal Meta OLD================== */
+            // async function askSessionMeta() {
+            //     const r = await Swal.fire({
+            //         title: 'اطلاعات جلسه',
+            //         html: `
+            //             <input id="t" class="swal2-input" placeholder="نام جلسه">
+            //             <input id="l" class="swal2-input" placeholder="مکان برگزاری">
+            //             <input id="tm" type="time" class="swal2-input">
+            //         `,
+            //         preConfirm: () => {
+            //             const title = t.value.trim();
+            //             if (!title) return Swal.showValidationMessage('نام جلسه الزامی است');
+            //             return {
+            //                 title,
+            //                 location: l.value.trim(),
+            //                 startTime: tm.value
+            //             };
+            //         },
+            //         showCancelButton: true
+            //     });
+            //     return r.isConfirmed ? r.value : null;
+            // }
+
+            /* ================== FINAL SAVE ================== */
+            toStep3Btn.onclick = async () => {
+
+                if (!selectedStudentIds.size)
+                    return Swal.fire('هشدار', 'هیچ دانش‌آموزی انتخاب نشده است', 'warning');
+
+                const meta = await askSessionMeta();
+                if (!meta) return;
+
+                const today = new Intl.DateTimeFormat('fa-IR-u-ca-persian',{
+                    year:'numeric',month:'2-digit',day:'2-digit'
+                }).format(new Date());
+
+                const fd = new FormData();
+                fd.append('__RequestVerificationToken', getAntiForgeryToken());
+                fd.append('title', meta.title);
+                fd.append('dateShamsi', today);
+                fd.append('grade', mode === 'byGrade' ? selectedGrade : 'ALL');
+                fd.append('priod', meta.period);
+                fd.append('location', meta.location);
+                fd.append('startTime', meta.startTime);
+
+                selectedStudentIds.forEach(id => fd.append('studentIds', id));
+
+                Swal.showLoading();
+                const res = await fetch('@Url.Action("CreateSessionAjax", "Attendance")', {
+                    method: 'POST',
+                    body: fd
+                });
+
+                const data = await res.json();
+                if (!res.ok) return Swal.fire('خطا', data.error, 'error');
+
+                Swal.fire('موفق', 'جلسه ایجاد شد', 'success')
+                    .then(() => location.href = `/Attendance/SessionDetails/${data.id}`);
+            };
+
+        })();
+    </script>
+}
+
+@* @section CreateWizardSesstionScripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function () {
             /* ================== DOM ================== */
             const step1 = document.getElementById('step-1');
             const step2 = document.getElementById('step-2');
@@ -418,4 +703,4 @@
             };
         })();
     </script>
-}
+} *@

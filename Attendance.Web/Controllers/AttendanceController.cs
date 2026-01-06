@@ -206,136 +206,231 @@ namespace Attendance.Web.Controllers
         // ---------------- CreateSessionAjax ----------------
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateSessionAjax([FromForm] string title,
-                                                           [FromForm] string dateShamsi,
-                                                           [FromForm] string grade,
-                                                           [FromForm] string? location,
-                                                           [FromForm] string? startTime, // optional "HH:mm"
-                                                           [FromForm] int[]? studentIds)
-        {
-            if (string.IsNullOrWhiteSpace(title))
-                return BadRequest(new { error = "title required" });
+        public async Task<IActionResult> CreateSessionAjax(
+                                                [FromForm] string title,
+                                                [FromForm] string dateShamsi,
+                                                [FromForm] string grade,
+                                                [FromForm] string? location,
+                                                [FromForm] string? startTime,
+                                                [FromForm] string period,          // ✅ جدید
+                                                [FromForm] int[]? studentIds)
+                                            {
+                                                if (string.IsNullOrWhiteSpace(title))
+                                                    return BadRequest(new { error = "title required" });
 
-            if (string.IsNullOrWhiteSpace(grade))
-                return BadRequest(new { error = "grade required" });
+                                                if (string.IsNullOrWhiteSpace(grade))
+                                                    return BadRequest(new { error = "grade required" });
 
-            try
-            {
-                // تبدیل تاریخ شمسی به UTC (تابع شما)
-                DateTime sessionUtc = PersianDateConverter.ParseShamsiToDate(dateShamsi);
+                                                if (string.IsNullOrWhiteSpace(period))
+                                                    return BadRequest(new { error = "period required" });
 
-                // ایجاد نمونه جدید و نگاشت به ستون‌های جدول شما
-                var session = new AttendanceSession();
+                                                if (!Enum.TryParse<SessionPeriod>(period, true, out var sessionPeriod))
+                                                    return BadRequest(new { error = "invalid period value" });
 
-                session.Title = title.Trim();
+                                                try
+                                                {
+                                                    DateTime sessionUtc = PersianDateConverter.ParseShamsiToDate(dateShamsi);
 
-                // جدول شما ستون Date از نوع date دارد - فقط تاریخ را ذخیره می‌کنیم
-                session.Date = sessionUtc.Date;
+                                                    var session = new AttendanceSession
+                                                    {
+                                                        Title = title.Trim(),
+                                                        Date = sessionUtc.Date,
+                                                        Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim(),
+                                                        Period = sessionPeriod,
+                                                        CreatedAt = DateTime.UtcNow
+                                                    };
 
-                // اگر startTime ارسال شده باشد، آن را parse کن و StartAt را تنظیم کن (UTC)
-                if (!string.IsNullOrWhiteSpace(startTime))
-                {
-                    // انتظار فرمت "HH:mm"
-                    if (TimeSpan.TryParse(startTime, out var ts))
-                    {
-                        // ساخت یک DateTime بر پایه تاریخ sessionUtc + زمان ts
-                        var startLocal = new DateTime(sessionUtc.Year, sessionUtc.Month, sessionUtc.Day, ts.Hours, ts.Minutes, 0, DateTimeKind.Utc);
-                        session.StartAt = startLocal;
-                    }
-                    else
-                    {
-                        // اگر parse نشد، می‌توانیم نادیده بگیریم یا لاگ کنیم
-                        _logger?.LogWarning("CreateSessionAjax: unable to parse startTime='{StartTime}'", startTime);
-                    }
-                }
+                                                    if (!string.IsNullOrWhiteSpace(startTime) &&
+                                                        TimeSpan.TryParse(startTime, out var ts))
+                                                    {
+                                                        session.StartAt = new DateTime(
+                                                            sessionUtc.Year,
+                                                            sessionUtc.Month,
+                                                            sessionUtc.Day,
+                                                            ts.Hours,
+                                                            ts.Minutes,
+                                                            0,
+                                                            DateTimeKind.Utc
+                                                        );
+                                                    }
 
-                // (اختیاری) EndAt را همان StartAt قرار می‌دهیم یا null
-                session.EndAt = null;
+                                                    if (!string.IsNullOrWhiteSpace(grade))
+                                                    {
+                                                        var cls = await _db.Classes.AsNoTracking()
+                                                                                   .FirstOrDefaultAsync(c => c.Name == grade);
+                                                        if (cls != null)
+                                                            session.ClassId = cls.Id;
+                                                        else
+                                                            session.Notes = $"GradeProvided:{grade}";
+                                                    }
 
-                // location
-                session.Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim();
+                                                    var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                                                    if (int.TryParse(userIdClaim, out var uid))
+                                                        session.CreatedById = uid;
 
-                // تلاش برای نگاشت grade -> ClassId اگر جدول Classes دارید
-                if (!string.IsNullOrWhiteSpace(grade))
-                {
-                    var cls = await _db.Classes.AsNoTracking().FirstOrDefaultAsync(c => c.Name == grade);
-                    if (cls != null)
-                    {
-                        session.ClassId = cls.Id;
-                    }
-                    else
-                    {
-                        // اگر کلاس پیدا نشد می‌توانیم در Notes ثبت کنیم (اختیاری)
-                        session.Notes = (session.Notes ?? "") + $"GradeProvided:{grade}";
-                    }
-                }
+                                                    if (studentIds?.Length > 0)
+                                                    {
+                                                        foreach (var sid in studentIds)
+                                                        {
+                                                            if (!await _db.Students.AnyAsync(s => s.Id == sid)) continue;
 
-                // CreatedById از Claim (اگر id عددی باشد)
-                int? createdById = null;
-                var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var parsedUserId))
-                {
-                    createdById = parsedUserId;
-                    session.CreatedById = createdById;
-                }
-                session.CreatedAt = DateTime.UtcNow;
+                                                            session.Records.Add(new AttendanceRecord
+                                                            {
+                                                                StudentId = sid,
+                                                                Status = AttendanceStatus.Absent,
+                                                                CreatedAt = DateTime.UtcNow
+                                                            });
+                                                        }
+                                                    }
 
-                // اضافه کردن رکوردهای اولیه با Status = Absent (یا مقدار پیشفرض شما)
-                if (studentIds != null && studentIds.Length > 0)
-                {
-                    foreach (var sid in studentIds)
-                    {
-                        // اعتبارسنجی ساده: وجود دانش‌آموز
-                        var exists = await _db.Students.AsNoTracking().AnyAsync(s => s.Id == sid);
-                        if (!exists) continue;
+                                                    _db.AttendanceSessions.Add(session);
+                                                    await _db.SaveChangesAsync();
 
-                        var rec = new AttendanceRecord
-                        {
-                            // توجه: SessionId را EF بعد از افزودن session و SaveChanges مقداردهی می‌کند
-                            StudentId = sid,
-                            Status = AttendanceStatus.Absent, // مقدار پیش‌فرض: غایب
-                            LateMinutes = null,
-                            Note = null,
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        session.Records.Add(rec);
-                    }
-                }
+                                                    return Json(new { id = session.Id });
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    _logger?.LogError(ex, "CreateSessionAjax failed");
+                                                    return StatusCode(500, new { error = "خطا در ایجاد جلسه" });
+                                                }
+                                            }
 
-                _db.AttendanceSessions.Add(session);
-                await _db.SaveChangesAsync();
 
-                _logger?.LogInformation("Attendance session {SessionId} created by {User} for grade {Grade} with {Count} students",
-                    session.Id, User?.Identity?.Name ?? "anonymous", grade, session.Records?.Count ?? 0);
+        // ---------------- CreateSessionAjax ----------------
 
-                return Json(new { id = session.Id, message = "جلسه با موفقیت ایجاد شد." });
-            }
-            catch (DbUpdateException dbex)
-            {
-                _logger?.LogError(dbex, "DB error creating attendance session for grade {Grade} by {User}", grade, User?.Identity?.Name);
-                var inner = dbex.InnerException?.Message ?? dbex.Message;
-                return StatusCode(500, new
-                {
-                    error = "خطا در ذخیره‌سازی جلسه (DB).",
-                    dbMessage = dbex.Message,
-                    inner = inner,
-                    entries = dbex.Entries?.Select(e => new
-                    {
-                        type = e.Entity?.GetType().FullName,
-                        state = e.State.ToString(),
-                        values = e.CurrentValues?.ToObject()
-                    }).ToArray()
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error creating attendance session for grade {Grade} by {User}", grade, User?.Identity?.Name);
-                return StatusCode(500, new { error = "خطا در ایجاد جلسه حضور و غیاب." });
-            }
-        }
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> CreateSessionAjax([FromForm] string title,
+        //                                                   [FromForm] string dateShamsi,
+        //                                                   [FromForm] string grade,
+        //                                                   [FromForm] string? location,
+        //                                                   [FromForm] string? startTime, // optional "HH:mm"
+        //                                                   [FromForm] int[]? studentIds)
+        //{
+        //    if (string.IsNullOrWhiteSpace(title))
+        //        return BadRequest(new { error = "title required" });
+
+        //    if (string.IsNullOrWhiteSpace(grade))
+        //        return BadRequest(new { error = "grade required" });
+
+        //    try
+        //    {
+        //        // تبدیل تاریخ شمسی به UTC (تابع شما)
+        //        DateTime sessionUtc = PersianDateConverter.ParseShamsiToDate(dateShamsi);
+
+        //        // ایجاد نمونه جدید و نگاشت به ستون‌های جدول شما
+        //        var session = new AttendanceSession();
+
+        //        session.Title = title.Trim();
+
+        //        // جدول شما ستون Date از نوع date دارد - فقط تاریخ را ذخیره می‌کنیم
+        //        session.Date = sessionUtc.Date;
+
+        //        // اگر startTime ارسال شده باشد، آن را parse کن و StartAt را تنظیم کن (UTC)
+        //        if (!string.IsNullOrWhiteSpace(startTime))
+        //        {
+        //            // انتظار فرمت "HH:mm"
+        //            if (TimeSpan.TryParse(startTime, out var ts))
+        //            {
+        //                // ساخت یک DateTime بر پایه تاریخ sessionUtc + زمان ts
+        //                var startLocal = new DateTime(sessionUtc.Year, sessionUtc.Month, sessionUtc.Day, ts.Hours, ts.Minutes, 0, DateTimeKind.Utc);
+        //                session.StartAt = startLocal;
+        //            }
+        //            else
+        //            {
+        //                // اگر parse نشد، می‌توانیم نادیده بگیریم یا لاگ کنیم
+        //                _logger?.LogWarning("CreateSessionAjax: unable to parse startTime='{StartTime}'", startTime);
+        //            }
+        //        }
+
+        //        // (اختیاری) EndAt را همان StartAt قرار می‌دهیم یا null
+        //        session.EndAt = null;
+
+        //        // location
+        //        session.Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim();
+
+        //        // تلاش برای نگاشت grade -> ClassId اگر جدول Classes دارید
+        //        if (!string.IsNullOrWhiteSpace(grade))
+        //        {
+        //            var cls = await _db.Classes.AsNoTracking().FirstOrDefaultAsync(c => c.Name == grade);
+        //            if (cls != null)
+        //            {
+        //                session.ClassId = cls.Id;
+        //            }
+        //            else
+        //            {
+        //                // اگر کلاس پیدا نشد می‌توانیم در Notes ثبت کنیم (اختیاری)
+        //                session.Notes = (session.Notes ?? "") + $"GradeProvided:{grade}";
+        //            }
+        //        }
+
+        //        // CreatedById از Claim (اگر id عددی باشد)
+        //        int? createdById = null;
+        //        var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        //        if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var parsedUserId))
+        //        {
+        //            createdById = parsedUserId;
+        //            session.CreatedById = createdById;
+        //        }
+        //        session.CreatedAt = DateTime.UtcNow;
+
+        //        // اضافه کردن رکوردهای اولیه با Status = Absent (یا مقدار پیشفرض شما)
+        //        if (studentIds != null && studentIds.Length > 0)
+        //        {
+        //            foreach (var sid in studentIds)
+        //            {
+        //                // اعتبارسنجی ساده: وجود دانش‌آموز
+        //                var exists = await _db.Students.AsNoTracking().AnyAsync(s => s.Id == sid);
+        //                if (!exists) continue;
+
+        //                var rec = new AttendanceRecord
+        //                {
+        //                    // توجه: SessionId را EF بعد از افزودن session و SaveChanges مقداردهی می‌کند
+        //                    StudentId = sid,
+        //                    Status = AttendanceStatus.Absent, // مقدار پیش‌فرض: غایب
+        //                    LateMinutes = null,
+        //                    Note = null,
+        //                    CreatedAt = DateTime.UtcNow
+        //                };
+        //                session.Records.Add(rec);
+        //            }
+        //        }
+
+        //        _db.AttendanceSessions.Add(session);
+        //        await _db.SaveChangesAsync();
+
+        //        _logger?.LogInformation("Attendance session {SessionId} created by {User} for grade {Grade} with {Count} students",
+        //            session.Id, User?.Identity?.Name ?? "anonymous", grade, session.Records?.Count ?? 0);
+
+        //        return Json(new { id = session.Id, message = "جلسه با موفقیت ایجاد شد." });
+        //    }
+        //    catch (DbUpdateException dbex)
+        //    {
+        //        _logger?.LogError(dbex, "DB error creating attendance session for grade {Grade} by {User}", grade, User?.Identity?.Name);
+        //        var inner = dbex.InnerException?.Message ?? dbex.Message;
+        //        return StatusCode(500, new
+        //        {
+        //            error = "خطا در ذخیره‌سازی جلسه (DB).",
+        //            dbMessage = dbex.Message,
+        //            inner = inner,
+        //            entries = dbex.Entries?.Select(e => new
+        //            {
+        //                type = e.Entity?.GetType().FullName,
+        //                state = e.State.ToString(),
+        //                values = e.CurrentValues?.ToObject()
+        //            }).ToArray()
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger?.LogError(ex, "Error creating attendance session for grade {Grade} by {User}", grade, User?.Identity?.Name);
+        //        return StatusCode(500, new { error = "خطا در ایجاد جلسه حضور و غیاب." });
+        //    }
+        //}
 
 
         // ---------------- SaveAttendance ----------------
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveAttendance()

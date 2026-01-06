@@ -82,6 +82,8 @@ namespace Attendance.Data.Entities
         /// </summary>
         public string? Notes { get; set; }
 
+        public SessionPeriod Period { get; set; }
+
         /// <summary>
         /// Navigation: رکوردهای حضور/غیاب مرتبط با این جلسه
         /// </summary>
@@ -100,4 +102,10 @@ namespace Attendance.Data.Entities
             }
         }
     }
+    public enum SessionPeriod
+    {
+        Morning = 1,
+        Evening = 2
+    }
+
 }
