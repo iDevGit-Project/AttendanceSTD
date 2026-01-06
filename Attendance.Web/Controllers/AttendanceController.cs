@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -224,8 +225,13 @@ namespace Attendance.Web.Controllers
                                                 if (string.IsNullOrWhiteSpace(period))
                                                     return BadRequest(new { error = "period required" });
 
-                                                if (!Enum.TryParse<SessionPeriod>(period, true, out var sessionPeriod))
-                                                    return BadRequest(new { error = "invalid period value" });
+                                                if (!Enum.TryParse<SessionPeriod>(period, out var finalPeriod))
+                                                {
+                                                    return BadRequest(new { error = "بازه زمانی نامعتبر است" });
+                                                }
+
+                                                //if (!Enum.TryParse<SessionPeriod>(period, true, out var sessionPeriod))
+                                                //                                        return BadRequest(new { error = "invalid period value" });
 
                                                 try
                                                 {
@@ -236,13 +242,21 @@ namespace Attendance.Web.Controllers
                                                         Title = title.Trim(),
                                                         Date = sessionUtc.Date,
                                                         Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim(),
-                                                        Period = sessionPeriod,
+                                                        Period = finalPeriod,
                                                         CreatedAt = DateTime.UtcNow
                                                     };
 
-                                                    if (!string.IsNullOrWhiteSpace(startTime) &&
-                                                        TimeSpan.TryParse(startTime, out var ts))
+                                                    if (!string.IsNullOrWhiteSpace(startTime))
                                                     {
+                                                        if (!TimeSpan.TryParseExact(
+                                                            startTime,
+                                                            "hh\\:mm",
+                                                            CultureInfo.InvariantCulture,
+                                                            out var ts))
+                                                        {
+                                                            return BadRequest(new { error = "فرمت ساعت نامعتبر است" });
+                                                        }
+
                                                         session.StartAt = new DateTime(
                                                             sessionUtc.Year,
                                                             sessionUtc.Month,
@@ -254,7 +268,22 @@ namespace Attendance.Web.Controllers
                                                         );
                                                     }
 
-                                                    if (!string.IsNullOrWhiteSpace(grade))
+
+                                                    //if (!string.IsNullOrWhiteSpace(startTime) &&
+                                                    //    TimeSpan.TryParse(startTime, out var ts))
+                                                    //{
+                                                    //    session.StartAt = new DateTime(
+                                                    //        sessionUtc.Year,
+                                                    //        sessionUtc.Month,
+                                                    //        sessionUtc.Day,
+                                                    //        ts.Hours,
+                                                    //        ts.Minutes,
+                                                    //        0,
+                                                    //        DateTimeKind.Utc
+                                                    //    );
+                                                    //}
+
+                if (!string.IsNullOrWhiteSpace(grade))
                                                     {
                                                         var cls = await _db.Classes.AsNoTracking()
                                                                                    .FirstOrDefaultAsync(c => c.Name == grade);
@@ -628,21 +657,57 @@ namespace Attendance.Web.Controllers
             public int? lateMinutes { get; set; }
         }
 
+        // ---------------- CreateSession ----------------
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateSession([FromForm] string title, [FromForm] string dateShamsi, [FromForm] string grade, [FromForm] string? startTime, [FromForm] string? location, [FromForm] int[]? studentIds)
-        {
-            var result = await CreateSessionAjax(title, dateShamsi, grade, location, startTime, studentIds) as JsonResult;
-            if (result == null) return RedirectToAction("CreateWizard");
-            dynamic data = result.Value;
-            if (data != null && data.id != null)
-            {
-                return RedirectToAction(nameof(SessionDetails), new { id = (int)data.id });
-            }
-            return RedirectToAction("CreateWizard");
-        }
+        public async Task<IActionResult> CreateSession(
+                                            [FromForm] string title,
+                                            [FromForm] string dateShamsi,
+                                            [FromForm] string grade,
+                                            [FromForm] string period,          // ✅ اضافه شد
+                                            [FromForm] string? startTime,
+                                            [FromForm] string? location,
+                                            [FromForm] int[]? studentIds)
+                                        {
+                                            var result = await CreateSessionAjax(
+                                                title,
+                                                dateShamsi,
+                                                grade,
+                                                location,
+                                                startTime,
+                                                period,        // ✅ ارسال period
+                                                studentIds
+                                            ) as JsonResult;
+
+                                            if (result == null)
+                                                return RedirectToAction("CreateWizard");
+
+                                            dynamic data = result.Value;
+                                            if (data != null && data.id != null)
+                                            {
+                                                return RedirectToAction(nameof(SessionDetails), new { id = (long)data.id });
+                                            }
+
+                                            return RedirectToAction("CreateWizard");
+                                        }
+
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> CreateSession([FromForm] string title, [FromForm] string dateShamsi, [FromForm] string grade, [FromForm] string? startTime, [FromForm] string? location, [FromForm] int[]? studentIds)
+        //{
+        //    var result = await CreateSessionAjax(title, dateShamsi, grade, location, startTime, studentIds) as JsonResult;
+        //    if (result == null) return RedirectToAction("CreateWizard");
+        //    dynamic data = result.Value;
+        //    if (data != null && data.id != null)
+        //    {
+        //        return RedirectToAction(nameof(SessionDetails), new { id = (int)data.id });
+        //    }
+        //    return RedirectToAction("CreateWizard");
+        //}
 
         // ----------  GET SessionDetails ----------
+
+        // ---------------- SessionDetails ----------------
         [HttpGet]
         public async Task<IActionResult> SessionDetails(long id)
         {

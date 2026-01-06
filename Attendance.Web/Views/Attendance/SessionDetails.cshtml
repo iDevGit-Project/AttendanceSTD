@@ -61,11 +61,16 @@
 
                                 if (Model?.StartAt.HasValue == true)
                                 {
-                                    var startAt = Model.StartAt.Value;
+                                    startDisplay = Model.StartAt.Value.ToString("HH:mm");
+                                }
 
-                                    startDisplay = startAt.ToString("HH:mm");
-
-                                    periodLabel = startAt.Hour < 12 ? "صبح" : "عصر";
+                                if (Model != null)
+                                {
+                                    periodLabel = Model.Period == SessionPeriod.Morning
+                                    ? "صبح"
+                                    : Model.Period == SessionPeriod.Evening
+                                    ? "عصر"
+                                    : "";
                                 }
                             }
                             @startDisplay
