@@ -307,6 +307,12 @@
                     year:'numeric',month:'2-digit',day:'2-digit'
                 }).format(new Date());
 
+                console.log('dateShamsi =>', today);
+
+                // const today = new Intl.DateTimeFormat('fa-IR-u-ca-persian',{
+                //     year:'numeric',month:'2-digit',day:'2-digit'
+                // }).format(new Date());
+
                 const fd = new FormData();
                 fd.append('__RequestVerificationToken', getAntiForgeryToken());
                 fd.append('title', meta.title);
