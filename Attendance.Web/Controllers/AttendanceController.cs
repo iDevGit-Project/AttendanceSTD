@@ -106,7 +106,8 @@ namespace Attendance.Web.Controllers
 
             var students = await _db.Students
                 .Where(s => s.Grade == grade && s.IsActive)
-                .Select(s => new {
+                .Select(s => new
+                {
                     id = s.Id,
                     firstName = s.FirstName,
                     lastName = s.LastName,
@@ -215,114 +216,107 @@ namespace Attendance.Web.Controllers
                                                 [FromForm] string? startTime,
                                                 [FromForm] string period,          // ✅ جدید
                                                 [FromForm] int[]? studentIds)
-                                            {
-                                                if (string.IsNullOrWhiteSpace(title))
-                                                    return BadRequest(new { error = "title required" });
+        {
+            if (string.IsNullOrWhiteSpace(title))
+                return BadRequest(new { error = "title required" });
 
-                                                if (string.IsNullOrWhiteSpace(grade))
-                                                    return BadRequest(new { error = "grade required" });
+            if (string.IsNullOrWhiteSpace(grade))
+                return BadRequest(new { error = "grade required" });
 
-                                                if (string.IsNullOrWhiteSpace(period))
-                                                    return BadRequest(new { error = "period required" });
+            if (string.IsNullOrWhiteSpace(period))
+                return BadRequest(new { error = "period required" });
 
-                                                if (!Enum.TryParse<SessionPeriod>(period, out var finalPeriod))
-                                                {
-                                                    return BadRequest(new { error = "بازه زمانی نامعتبر است" });
-                                                }
+            if (!Enum.TryParse<SessionPeriod>(period, true, out var finalPeriod))
+            {
+                return BadRequest(new { error = "بازه زمانی نامعتبر است" });
+            }
 
-                                                //if (!Enum.TryParse<SessionPeriod>(period, true, out var sessionPeriod))
-                                                //                                        return BadRequest(new { error = "invalid period value" });
+            try
+            {
+                DateTime sessionUtc = PersianDateConverter.ParseShamsiToDate(dateShamsi);
 
-                                                try
-                                                {
-                                                    DateTime sessionUtc = PersianDateConverter.ParseShamsiToDate(dateShamsi);
+                var session = new AttendanceSession
+                {
+                    Title = title.Trim(),
+                    Date = sessionUtc.Date,
+                    Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim(),
+                    Period = finalPeriod,
+                    CreatedAt = DateTime.UtcNow
+                };
+                     startTime = startTime?
+                    .Replace('۰', '0')
+                    .Replace('۱', '1')
+                    .Replace('۲', '2')
+                    .Replace('۳', '3')
+                    .Replace('۴', '4')
+                    .Replace('۵', '5')
+                    .Replace('۶', '6')
+                    .Replace('۷', '7')
+                    .Replace('۸', '8')
+                    .Replace('۹', '9');
 
-                                                    var session = new AttendanceSession
-                                                    {
-                                                        Title = title.Trim(),
-                                                        Date = sessionUtc.Date,
-                                                        Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim(),
-                                                        Period = finalPeriod,
-                                                        CreatedAt = DateTime.UtcNow
-                                                    };
+                if (!string.IsNullOrWhiteSpace(startTime))
+                {
+                    if (!TimeSpan.TryParseExact(
+                        startTime,
+                        "hh\\:mm",
+                        CultureInfo.InvariantCulture,
+                        out var ts))
+                    {
+                        return BadRequest(new { error = "فرمت ساعت نامعتبر است" });
+                    }
 
-                                                    if (!string.IsNullOrWhiteSpace(startTime))
-                                                    {
-                                                        if (!TimeSpan.TryParseExact(
-                                                            startTime,
-                                                            "hh\\:mm",
-                                                            CultureInfo.InvariantCulture,
-                                                            out var ts))
-                                                        {
-                                                            return BadRequest(new { error = "فرمت ساعت نامعتبر است" });
-                                                        }
-
-                                                        session.StartAt = new DateTime(
-                                                            sessionUtc.Year,
-                                                            sessionUtc.Month,
-                                                            sessionUtc.Day,
-                                                            ts.Hours,
-                                                            ts.Minutes,
-                                                            0,
-                                                            DateTimeKind.Utc
-                                                        );
-                                                    }
-
-
-                                                    //if (!string.IsNullOrWhiteSpace(startTime) &&
-                                                    //    TimeSpan.TryParse(startTime, out var ts))
-                                                    //{
-                                                    //    session.StartAt = new DateTime(
-                                                    //        sessionUtc.Year,
-                                                    //        sessionUtc.Month,
-                                                    //        sessionUtc.Day,
-                                                    //        ts.Hours,
-                                                    //        ts.Minutes,
-                                                    //        0,
-                                                    //        DateTimeKind.Utc
-                                                    //    );
-                                                    //}
+                    session.StartAt = new DateTime(
+                        sessionUtc.Year,
+                        sessionUtc.Month,
+                        sessionUtc.Day,
+                        ts.Hours,
+                        ts.Minutes,
+                        0,
+                        DateTimeKind.Utc
+                    );
+                }
 
                 if (!string.IsNullOrWhiteSpace(grade))
-                                                    {
-                                                        var cls = await _db.Classes.AsNoTracking()
-                                                                                   .FirstOrDefaultAsync(c => c.Name == grade);
-                                                        if (cls != null)
-                                                            session.ClassId = cls.Id;
-                                                        else
-                                                            session.Notes = $"GradeProvided:{grade}";
-                                                    }
+                {
+                    var cls = await _db.Classes.AsNoTracking()
+                                               .FirstOrDefaultAsync(c => c.Name == grade);
+                    if (cls != null)
+                        session.ClassId = cls.Id;
+                    else
+                        session.Notes = $"GradeProvided:{grade}";
+                }
 
-                                                    var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                                                    if (int.TryParse(userIdClaim, out var uid))
-                                                        session.CreatedById = uid;
+                var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(userIdClaim, out var uid))
+                    session.CreatedById = uid;
 
-                                                    if (studentIds?.Length > 0)
-                                                    {
-                                                        foreach (var sid in studentIds)
-                                                        {
-                                                            if (!await _db.Students.AnyAsync(s => s.Id == sid)) continue;
+                if (studentIds?.Length > 0)
+                {
+                    foreach (var sid in studentIds)
+                    {
+                        if (!await _db.Students.AnyAsync(s => s.Id == sid)) continue;
 
-                                                            session.Records.Add(new AttendanceRecord
-                                                            {
-                                                                StudentId = sid,
-                                                                Status = AttendanceStatus.Absent,
-                                                                CreatedAt = DateTime.UtcNow
-                                                            });
-                                                        }
-                                                    }
+                        session.Records.Add(new AttendanceRecord
+                        {
+                            StudentId = sid,
+                            Status = AttendanceStatus.Absent,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
 
-                                                    _db.AttendanceSessions.Add(session);
-                                                    await _db.SaveChangesAsync();
+                _db.AttendanceSessions.Add(session);
+                await _db.SaveChangesAsync();
 
-                                                    return Json(new { id = session.Id });
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    _logger?.LogError(ex, "CreateSessionAjax failed");
-                                                    return StatusCode(500, new { error = "خطا در ایجاد جلسه" });
-                                                }
-                                            }
+                return Json(new { id = session.Id });
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "CreateSessionAjax failed");
+                return StatusCode(500, new { error = "خطا در ایجاد جلسه" });
+            }
+        }
 
 
         // ---------------- CreateSessionAjax ----------------
@@ -668,28 +662,28 @@ namespace Attendance.Web.Controllers
                                             [FromForm] string? startTime,
                                             [FromForm] string? location,
                                             [FromForm] int[]? studentIds)
-                                        {
-                                            var result = await CreateSessionAjax(
-                                                title,
-                                                dateShamsi,
-                                                grade,
-                                                location,
-                                                startTime,
-                                                period,        // ✅ ارسال period
-                                                studentIds
-                                            ) as JsonResult;
+        {
+            var result = await CreateSessionAjax(
+                title,
+                dateShamsi,
+                grade,
+                location,
+                startTime,
+                period,        // ✅ ارسال period
+                studentIds
+            ) as JsonResult;
 
-                                            if (result == null)
-                                                return RedirectToAction("CreateWizard");
+            if (result == null)
+                return RedirectToAction("CreateWizard");
 
-                                            dynamic data = result.Value;
-                                            if (data != null && data.id != null)
-                                            {
-                                                return RedirectToAction(nameof(SessionDetails), new { id = (long)data.id });
-                                            }
+            dynamic data = result.Value;
+            if (data != null && data.id != null)
+            {
+                return RedirectToAction(nameof(SessionDetails), new { id = (long)data.id });
+            }
 
-                                            return RedirectToAction("CreateWizard");
-                                        }
+            return RedirectToAction("CreateWizard");
+        }
 
         //[HttpPost]
         //[ValidateAntiForgeryToken]

@@ -116,6 +116,24 @@
                 return el ? el.value : null;
             }
 
+            /* ================== Time Normalizer (FIX اصلی) ================== */
+            function normalizeTime(value) {
+                if (!value) return null;
+
+                // حذف AM / PM اگر مرورگر اضافه کرده باشد
+                value = value.replace(/AM|PM|am|pm/g, '').trim();
+
+                const match = value.match(/^(\d{1,2}):(\d{2})$/);
+                if (!match) return null;
+
+                const h = parseInt(match[1], 10);
+                const m = parseInt(match[2], 10);
+
+                if (h > 23 || m > 59) return null;
+
+                return h.toString().padStart(2, '0') + ':' + m.toString().padStart(2, '0');
+            }
+
             /* ================== Mode Change ================== */
             modeRadios.forEach(r => {
                 r.addEventListener('change', () => {
@@ -229,33 +247,25 @@
                 step1.classList.remove('hidden');
             };
 
-            /* ================== Swal Meta (FINAL – with Period) ================== */
+            /* ================== Swal Meta ================== */
             async function askSessionMeta() {
                 const r = await Swal.fire({
                     title: 'اطلاعات جلسه',
                     html: `
                         <input id="session-title" class="swal2-input" placeholder="نام جلسه را وارد نمایید">
-
                         <input id="session-location" class="swal2-input" placeholder="مکان برگزاری جلسه را وارد نمایید">
 
                         <div class="flex gap-2 justify-center mt-2">
                             <input id="session-time"
-                                   type="time"
+                                   type="text"
                                    class="swal2-input"
-                                   style="width:160px"
-                                   step="60">
+                                   style="width:160px;text-align:center"
+                                   placeholder="06:30">
                         </div>
 
                         <div class="flex gap-4 justify-center mt-3">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="session-period" value="Morning">
-                                <span>☀️ صبح</span>
-                            </label>
-
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="session-period" value="Evening">
-                                <span>🌙 عصر</span>
-                            </label>
+                            <label><input type="radio" name="session-period" value="Morning"> ☀️ صبح</label>
+                            <label><input type="radio" name="session-period" value="Evening"> 🌙 عصر</label>
                         </div>
                     `,
                     preConfirm: () => {
@@ -263,51 +273,19 @@
                         const location = document.getElementById('session-location').value.trim();
                         const rawTime = document.getElementById('session-time').value;
                         const period = document.querySelector('input[name="session-period"]:checked')?.value;
+
                         const time = normalizeTime(rawTime);
-                        if (!time) {
-                            Swal.showValidationMessage('ساعت را به‌صورت صحیح وارد کنید (مثلاً 06:30)');
-                            return false;
-                        }
 
-                        if (!title) {
-                            Swal.showValidationMessage('نام جلسه الزامی است');
-                            return false;
-                        }
+                        if (!title) return Swal.showValidationMessage('نام جلسه الزامی است');
+                        if (!location) return Swal.showValidationMessage('مکان جلسه الزامی است');
+                        if (!time) return Swal.showValidationMessage('ساعت نامعتبر است (مثلاً 06:30)');
+                        if (!period) return Swal.showValidationMessage('صبح یا عصر را انتخاب کنید');
 
-                        if (!location) {
-                            Swal.showValidationMessage('مکان برگزاری جلسه الزامی است');
-                            return false;
-                        }
-
-                        if (!time) {
-                            Swal.showValidationMessage('ساعت برگزاری جلسه را انتخاب کنید');
-                            return false;
-                        }
-
-                        if (!period) {
-                            Swal.showValidationMessage('بازه زمانی (صبح یا عصر) را انتخاب کنید');
-                            return false;
-                        }
-
-                        return {
-                            title,
-                            location,
-                            startTime: time,   // HH:mm
-                            period             // Morning | Evening
-                        };
+                        return { title, location, startTime: time, period };
                     },
-                    allowOutsideClick: false,
-                    allowEscapeKey: true,
                     showCancelButton: true,
-                    buttonsStyling: false,
                     confirmButtonText: 'تأیید و ادامه',
-                    cancelButtonText: 'انصراف',
-                    customClass: {
-                        cancelButton:
-                            "inline-block w-full px-3 py-2 bg-slate-100 font-bold text-sm text-slate-800 rounded hover:bg-slate-200 transition mt-3",
-                        confirmButton:
-                            "inline-block w-full px-3 py-2 bg-teal-100/70 font-bold text-teal-800 text-sm rounded hover:bg-teal-300 transition mt-3",
-                    },
+                    cancelButtonText: 'انصراف'
                 });
 
                 return r.isConfirmed ? r.value : null;
@@ -316,12 +294,11 @@
             /* ================== FINAL SAVE ================== */
             toStep3Btn.onclick = async () => {
 
-                if (mode === 'byGrade' && !selectedGrade) {
-                    return Swal.fire('هشدار', 'لطفاً پایه تحصیلی را انتخاب کنید', 'warning');
-                }
+                if (mode === 'byGrade' && !selectedGrade)
+                    return Swal.fire('هشدار', 'پایه تحصیلی انتخاب نشده', 'warning');
 
                 if (!selectedStudentIds.size)
-                    return Swal.fire('هشدار', 'هیچ دانش‌آموزی انتخاب نشده است', 'warning');
+                    return Swal.fire('هشدار', 'هیچ دانش‌آموزی انتخاب نشده', 'warning');
 
                 const meta = await askSessionMeta();
                 if (!meta) return;
@@ -356,4 +333,5 @@
 
         })();
     </script>
+
 }
