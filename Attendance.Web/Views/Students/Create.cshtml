@@ -100,6 +100,98 @@
             </div>
         </div>
         <div>
+            <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">
+                اطلاعات تکمیلی دانش‌آموز
+            </h2>
+        </div>
+
+        <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                <!-- OwnershipStatus -->
+                <div>
+                    <label asp-for="OwnershipStatus" class="block text-sm font-bold text-slate-700">وضعیت تملک</label>
+                    <select asp-for="OwnershipStatus" class="mt-1 block w-full rounded border px-3 py-2">
+                        <option value="">انتخاب کنید</option>
+                        <option value="0">مالک</option>
+                        <option value="1">مستأجر</option>
+                    </select>
+                    <span asp-validation-for="OwnershipStatus" class="text-rose-600 text-sm mt-1 block"></span>
+                </div>
+
+                <!-- StudentPhone -->
+                <div>
+                    <label asp-for="StudentPhone" class="block text-sm font-bold text-slate-700"></label>
+                    <input asp-for="StudentPhone" class="mt-1 block w-full rounded border px-3 py-2" />
+                </div>
+
+                <!-- FatherPhone -->
+                <div>
+                    <label asp-for="FatherPhone" class="block text-sm font-bold text-slate-700"></label>
+                    <input asp-for="FatherPhone" class="mt-1 block w-full rounded border px-3 py-2" />
+                </div>
+
+                <!-- MotherPhone -->
+                <div>
+                    <label asp-for="MotherPhone" class="block text-sm font-bold text-slate-700"></label>
+                    <input asp-for="MotherPhone" class="mt-1 block w-full rounded border px-3 py-2" />
+                </div>
+
+                <!-- FatherJob -->
+                <div>
+                    <label asp-for="FatherJob" class="block text-sm font-bold text-slate-700"></label>
+                    <input asp-for="FatherJob" class="mt-1 block w-full rounded border px-3 py-2" />
+                </div>
+
+                <!-- MotherJob -->
+                <div>
+                    <label asp-for="MotherJob" class="block text-sm font-bold text-slate-700"></label>
+                    <input asp-for="MotherJob" class="mt-1 block w-full rounded border px-3 py-2" />
+                </div>
+
+                <!-- LastAverageScore -->
+                <div>
+                    <label asp-for="LastAverageScore" class="block text-sm font-bold text-slate-700"></label>
+                    <input asp-for="LastAverageScore"
+                           type="number"
+                           step="0.01"
+                           class="mt-1 block w-full rounded border px-3 py-2" />
+                </div>
+
+                <!-- LastAverageDescription -->
+                <div>
+                    <label asp-for="LastAverageDescription" class="block text-sm font-bold text-slate-700"></label>
+                    <input asp-for="LastAverageDescription"
+                           placeholder="مثلاً: خوب، متوسط، عالی"
+                           class="mt-1 block w-full rounded border px-3 py-2" />
+                </div>
+
+                <!-- HomeAddress -->
+                <div>
+                    <label asp-for="HomeAddress" class="block text-sm font-bold text-slate-700">آدرس منزل</label>
+                    <input asp-for="HomeAddress" class="mt-1 block w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-200" />
+                    <span asp-validation-for="HomeAddress" class="text-rose-600 text-sm mt-1 block"></span>
+                </div>
+
+            </div>
+        </div>
+        
+        <!-- IsParentInEitaa -->
+        <div>
+            <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">وضعیت عضویت در شبکه های اجتماعی</h2>
+        </div>
+        <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">
+            <div class="flex flex-wrap items-center gap-6">
+                <!-- وضعیت فعال بودن والدین در شبکه های مجازی -->
+                <div class="flex items-center gap-2">
+                    <input asp-for="IsParentInEitaa" type="checkbox" class="h-4 w-4" />
+                    <label asp-for="IsParentInEitaa" class="text-sm font-bold text-slate-700">
+                        آیا والدین این دانش آموز در شبکه احتماعی ایتا عضویت دارند؟
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div>
             <h2 class="text-lg px-3 py-1 font-bold rounded-lg text-center text-slate-400 bg-slate-100">ثبت فرم های دانش آموز</h2>
         </div>
         <div class="bg-slate-100/50 rounded-lg border border-dashed p-4">

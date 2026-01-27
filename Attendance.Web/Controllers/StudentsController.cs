@@ -97,7 +97,20 @@ namespace Attendance.Web.Controllers
                 TalentTest = s.TalentTest,
                 PsychologyForm = s.PsychologyForm,
                 IQTest = s.IQTest,
-                WarkTest = s.WarkTest
+                WarkTest = s.WarkTest,
+
+                // === new fields (جدید اضافه‌شده) ===
+                HomeAddress = s.HomeAddress,
+                OwnershipStatus = s.OwnershipStatus,
+                StudentPhone = s.StudentPhone,
+                FatherPhone = s.FatherPhone,
+                MotherPhone = s.MotherPhone,
+                IsParentInEitaa = s.IsParentInEitaa,
+                FatherJob = s.FatherJob,
+                MotherJob = s.MotherJob,
+                LastAverageScore = s.LastAverageScore,
+                LastAverageDescription = s.LastAverageDescription
+
             }).ToList();
 
             var vm = new StudentsIndexViewModel
@@ -369,6 +382,18 @@ namespace Attendance.Web.Controllers
                 IsActive = model.IsActive,
                 // === new fields ===
                 PaymentStatus = model.PaymentStatus,
+
+                // === new fields (جدید اضافه‌شده) ===
+                HomeAddress = model.HomeAddress,
+                OwnershipStatus = model.OwnershipStatus,
+                StudentPhone = model.StudentPhone,
+                FatherPhone = model.FatherPhone,
+                MotherPhone = model.MotherPhone,
+                IsParentInEitaa = model.IsParentInEitaa,
+                FatherJob = model.FatherJob,
+                MotherJob = model.MotherJob,
+                LastAverageScore = model.LastAverageScore,
+                LastAverageDescription = model.LastAverageDescription,
                 // تاریخ‌ها (در صورت وجود)
                 BirthDate = birthDate,
                 EntryDate = entryDate

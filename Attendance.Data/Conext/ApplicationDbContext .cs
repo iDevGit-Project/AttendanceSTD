@@ -1,4 +1,4 @@
-﻿using Attendance.Data.Entities;
+﻿                using Attendance.Data.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;

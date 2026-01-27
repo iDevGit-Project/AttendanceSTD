@@ -1,5 +1,6 @@
-﻿@model Attendance.Data.VModels.Students.StudentsIndexViewModel
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.min.css" />
+﻿ @model Attendance.Data.VModels.Students.StudentsIndexViewModel
+<link rel="stylesheet" href="~/lib/print-js/print.min.css" />
+
 
 @{
     ViewData["Title"] = "فهرست دانش‌آموزان";
@@ -175,8 +176,8 @@
 @section IndexStudentsScripts {
     <script src="~/lib/signalr.min.js"></script>
     <script src="~/js/js_student/students.index.js" asp-append-version="true"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.min.js"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.all.min.js"></script>
+    <script src="~/lib/print-js/print.min.js"></script>
     <script src="~/js/js_htmltables/exporttables.js"></script>
 
     <script>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -36,6 +37,17 @@ namespace Attendance.Data.VModels
         public string? InactiveReason { get; set; }
         public int? ClassId { get; set; }
         public string? ClassName { get; set; }
+
+        public string? HomeAddress { get; set; }
+        public OwnershipStatus? OwnershipStatus { get; set; }
+        public string? StudentPhone { get; set; }
+        public string? FatherPhone { get; set; }
+        public string? MotherPhone { get; set; }
+        public bool IsParentInEitaa { get; set; }
+        public string? FatherJob { get; set; }
+        public string? MotherJob { get; set; }
+        public decimal? LastAverageScore { get; set; }
+        public string? LastAverageDescription { get; set; }
 
         // ====== نمایش داده های لیست در فرم ثبت نام ======
         public string? WorkgroupName { get; set; }
@@ -293,6 +305,46 @@ namespace Attendance.Data.VModels
         [StringLength(200)]
         [Display(Name = "نام کارگروه")]
         public string? WorkgroupName { get; set; }
+
+        // ========== ADDITIONAL FIELDS ==========
+
+        [Display(Name = "آدرس منزل")]
+        [StringLength(1000)]
+        public string? HomeAddress { get; set; }
+
+        [Display(Name = "وضعیت تملک")]
+        public OwnershipStatus? OwnershipStatus { get; set; }
+
+        [Display(Name = "شماره تماس دانش‌آموز")]
+        [StringLength(15)]
+        public string? StudentPhone { get; set; }
+
+        [Display(Name = "شماره تماس پدر")]
+        [StringLength(15)]
+        public string? FatherPhone { get; set; }
+
+        [Display(Name = "شماره تماس مادر")]
+        [StringLength(15)]
+        public string? MotherPhone { get; set; }
+
+        [Display(Name = "عضویت والدین در کانال ایتا")]
+        public bool IsParentInEitaa { get; set; }
+
+        [Display(Name = "شغل پدر")]
+        [StringLength(200)]
+        public string? FatherJob { get; set; }
+
+        [Display(Name = "شغل مادر")]
+        [StringLength(200)]
+        public string? MotherJob { get; set; }
+
+        [Display(Name = "آخرین معدل (عددی)")]
+        [Column(TypeName = "decimal(4,2)")]
+        public decimal? LastAverageScore { get; set; }
+
+        [Display(Name = "آخرین معدل (توضیح متنی)")]
+        [StringLength(100)]
+        public string? LastAverageDescription { get; set; }
 
         [Display(Name = "فرم تعهدنامه")]
         public Student.FormStatus ConsentForm { get; set; } = Student.FormStatus.Incomplete;

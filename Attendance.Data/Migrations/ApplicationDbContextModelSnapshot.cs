@@ -218,9 +218,17 @@ namespace Attendance.Data.Migrations
                     b.Property<DateTime?>("EntryDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("FatherJob")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("FatherName")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FatherPhone")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -230,6 +238,10 @@ namespace Attendance.Data.Migrations
                     b.Property<string>("Grade")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("HomeAddress")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<byte>("IQTest")
                         .HasColumnType("tinyint");
@@ -241,14 +253,35 @@ namespace Attendance.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsParentInEitaa")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastAverageDescription")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal?>("LastAverageScore")
+                        .HasColumnType("decimal(4,2)");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("MotherJob")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("MotherPhone")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
+
                     b.Property<string>("NationalCode")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<byte?>("OwnershipStatus")
+                        .HasColumnType("tinyint");
 
                     b.Property<byte>("ParentInterviewForm")
                         .HasColumnType("tinyint");
@@ -276,6 +309,10 @@ namespace Attendance.Data.Migrations
 
                     b.Property<byte>("StudentInterviewForm")
                         .HasColumnType("tinyint");
+
+                    b.Property<string>("StudentPhone")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.Property<byte>("TalentTest")
                         .HasColumnType("tinyint");
