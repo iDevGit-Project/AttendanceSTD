@@ -266,6 +266,24 @@
                         </select>
                         <span asp-validation-for="PaymentStatus" class="text-rose-600 text-sm mt-1 block"></span>
                     </div>
+                    <!-- Approved Tuition Amount -->
+                    <div>
+                        <label asp-for="ApprovedSixMonthTuition" class="block text-sm font-bold text-slate-700">
+                            شهریه مصوب شش‌ماهه (تومان)
+                        </label>
+
+                        <input asp-for="ApprovedSixMonthTuition"
+                               id="ApprovedSixMonthTuition"
+                               type="text"
+                               inputmode="numeric"
+                               class="mt-1 block w-full rounded border px-3 py-2 text-left"
+                               placeholder="مثلاً 1,500,000" />
+
+                        <span asp-validation-for="ApprovedSixMonthTuition" class="text-rose-600 text-sm mt-1 block"></span>
+                    </div>
+
+                    <input type="hidden" asp-for="PaidAmountSoFar" id="PaidAmountSoFar" />
+
                 </div>
             </div>
         </div>
@@ -335,6 +353,7 @@
 
 <partial name="_ValidationScriptsPartial" />
 @section CreateStudentsScripts {
+    <script src="~/lib/sweetalert2/sweetalert2.all.min.js"></script>
     <script>
         /* ===== Image preview (with client-side validation) ===== */
         (function () {
@@ -947,4 +966,77 @@
 
         })();
     </script>
+    <!-- اسکریپت دریافت مبلغ شهریه به تومان -->
+    <script>
+        (function () {
+
+            function formatNumber(value) {
+                return value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+
+            function unformatNumber(value) {
+                return value.replace(/,/g, '');
+            }
+
+            // ===== Three-digit formatting for tuition input =====
+            const tuitionInput = document.getElementById('ApprovedSixMonthTuition');
+            if (tuitionInput) {
+                tuitionInput.addEventListener('input', function () {
+                    const cursor = this.selectionStart;
+                    this.value = formatNumber(this.value);
+                    this.setSelectionRange(cursor, cursor);
+                });
+            }
+
+            // ===== PaymentStatus logic =====
+            const paymentSelect = document.querySelector('select[name="PaymentStatus"]');
+            const paidAmountHidden = document.getElementById('PaidAmountSoFar');
+
+            if (paymentSelect) {
+                paymentSelect.addEventListener('change', function () {
+
+                    if (this.value !== '2') return; // فقط در حال پرداخت
+
+                    Swal.fire({
+                        title: 'لطفاً مبلغ پرداختی را وارد نمایید',
+                        input: 'text',
+                        inputPlaceholder: 'مثلاً 1,000,000 تومان',
+                        inputAttributes: {
+                            inputmode: 'numeric',
+                            autocomplete: 'off'
+                        },
+                        showCancelButton: true,
+                        confirmButtonText: 'ثبت مبلغ',
+                        cancelButtonText: 'انصراف',
+                        preConfirm: (value) => {
+                            const raw = unformatNumber(value || '');
+                            if (!raw || isNaN(raw) || Number(raw) <= 0) {
+                                Swal.showValidationMessage('مبلغ وارد شده معتبر نیست');
+                                return false;
+                            }
+                            return raw;
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            paidAmountHidden.value = result.value;
+
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ثبت شد',
+                                text: 'مبلغ پرداختی با موفقیت ثبت شد',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            // اگر کنسل شد، وضعیت پرداخت برگردد
+                            paymentSelect.value = '0';
+                            paidAmountHidden.value = '';
+                        }
+                    });
+                });
+            }
+
+        })();
+    </script>
+
 }

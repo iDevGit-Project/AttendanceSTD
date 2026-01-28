@@ -48,6 +48,10 @@ namespace Attendance.Data.VModels
         public string? MotherJob { get; set; }
         public decimal? LastAverageScore { get; set; }
         public string? LastAverageDescription { get; set; }
+        // ===== Tuition Fields =====
+        public decimal? ApprovedSixMonthTuition { get; set; }
+        public decimal? PaidAmountSoFar { get; set; }
+        // مجموع پرداختی‌ها تا این لحظه
 
         // ====== نمایش داده های لیست در فرم ثبت نام ======
         public string? WorkgroupName { get; set; }
@@ -345,6 +349,18 @@ namespace Attendance.Data.VModels
         [Display(Name = "آخرین معدل (توضیح متنی)")]
         [StringLength(100)]
         public string? LastAverageDescription { get; set; }
+
+        // ===== Tuition Fields =====
+
+        [Display(Name = "شهریه مصوب شش‌ماهه")]
+        [Column(TypeName = "decimal(18,0)")]
+        public decimal? ApprovedSixMonthTuition { get; set; }
+        // مبلغ خام در دیتابیس (مثلاً: 1000000)
+
+        [Display(Name = "مبلغ پرداخت‌شده تا کنون")]
+        [Column(TypeName = "decimal(18,0)")]
+        public decimal? PaidAmountSoFar { get; set; }
+        // مجموع پرداختی‌ها تا این لحظه
 
         [Display(Name = "فرم تعهدنامه")]
         public Student.FormStatus ConsentForm { get; set; } = Student.FormStatus.Incomplete;

@@ -100,6 +100,18 @@ namespace Attendance.Data.Entities
 
         // ========== END ADDITIONAL FIELDS ==========
 
+        // ===== Tuition Fields =====
+
+        [Display(Name = "شهریه مصوب شش‌ماهه")]
+        [Column(TypeName = "decimal(18,0)")]
+        public decimal? ApprovedSixMonthTuition { get; set; }
+        // مبلغ خام در دیتابیس (مثلاً: 1000000)
+
+        [Display(Name = "مبلغ پرداخت‌شده تا کنون")]
+        [Column(TypeName = "decimal(18,0)")]
+        public decimal? PaidAmountSoFar { get; set; }
+        // مجموع پرداختی‌ها تا این لحظه
+
 
         // ========== NEW FIELDS ==========
         [Display(Name = "نام کارگروه")]

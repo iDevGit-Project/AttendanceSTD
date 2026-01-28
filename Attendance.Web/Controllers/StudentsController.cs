@@ -257,133 +257,431 @@ namespace Attendance.Web.Controllers
             }
 
         // ---------------- Create (POST) ----------------
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> Create(Data.VModels.StudentCreateViewModel model, IFormFile? Photo)
+        //{
+        //    // 1) اعتبارسنجی اولیه مدل
+        //    if (!ModelState.IsValid)
+        //    {
+        //        var notifyInvalid = new { type = "error", message = "فرم معتبر نیست. لطفاً مقادیر را بررسی کنید." };
+        //        TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyInvalid);
+
+        //        // در صورت وجود SelectList ها مجدداً آنها را لود کن (در صورت نیاز)
+        //        ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
+        //        return View(model);
+        //    }
+
+        //    // 2) اعتبارسنجی و پارس تاریخ‌های شمسی (BirthDateShamsi و EntryDateShamsi)
+        //    DateTime? birthDate = null;
+        //    DateTime? entryDate = null;
+
+        //    if (!string.IsNullOrWhiteSpace(model.BirthDateShamsi))
+        //    {
+        //        if (!PersianDateConverter.TryParseShamsiToDate(model.BirthDateShamsi.Trim(), out var bd))
+        //        {
+        //            ModelState.AddModelError(nameof(model.BirthDateShamsi), "فرمت تاریخ تولد نامعتبر است — از قالب YYYY/MM/DD استفاده کنید (مثال: 1389/02/25).");
+        //        }
+        //        else
+        //        {
+        //            birthDate = bd;
+        //        }
+        //    }
+
+        //    if (!string.IsNullOrWhiteSpace(model.EntryDateShamsi))
+        //    {
+        //        if (!PersianDateConverter.TryParseShamsiToDate(model.EntryDateShamsi.Trim(), out var ed))
+        //        {
+        //            ModelState.AddModelError(nameof(model.EntryDateShamsi), "فرمت تاریخ ورود نامعتبر است — از قالب YYYY/MM/DD استفاده کنید (مثال: 1403/07/01).");
+        //        }
+        //        else
+        //        {
+        //            entryDate = ed;
+        //        }
+        //    }
+
+        //    // اگر خطای مدل (مانند فرمت تاریخ) وجود دارد، دوباره ویو را بازگردان
+        //    if (!ModelState.IsValid)
+        //    {
+        //        // پیام کلی جهت نمایش با Swal (در صورت نیاز)
+        //        TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(new { type = "error", message = "فرم شامل مقادیر نامعتبر است. لطفاً خطاها را اصلاح کنید." });
+
+        //        ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
+        //        return View(model);
+        //    }
+
+        //    // 3) پردازش تصویر (اختیاری اما امن)
+        //    string? photoPath = null;
+        //    if (Photo != null && Photo.Length > 0)
+        //    {
+        //        var allowedExt = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        //        var ext = Path.GetExtension(Photo.FileName)?.ToLowerInvariant();
+        //        if (string.IsNullOrEmpty(ext) || !allowedExt.Contains(ext))
+        //        {
+        //            var notifyObj = new { type = "error", message = "پسوند تصویر نامعتبر است. (jpg, jpeg, png, webp)" };
+        //            TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyObj);
+        //            ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
+        //            return View(model);
+        //        }
+
+        //        const long maxBytes = 2 * 1024 * 1024; // 2MB
+        //        if (Photo.Length > maxBytes)
+        //        {
+        //            var notifyObj = new { type = "error", message = "حجم تصویر بیش از حد مجاز است (حداکثر 2 مگابایت)." };
+        //            TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyObj);
+        //            ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
+        //            return View(model);
+        //        }
+
+        //        try
+        //        {
+        //            var uploads = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", "students");
+        //            if (!Directory.Exists(uploads)) Directory.CreateDirectory(uploads);
+
+        //            var fileName = $"{Guid.NewGuid()}{ext}";
+        //            var filePath = Path.Combine(uploads, fileName);
+
+        //            await using (var fs = new FileStream(filePath, FileMode.Create))
+        //            {
+        //                await Photo.CopyToAsync(fs);
+        //            }
+
+        //            photoPath = $"/uploads/students/{fileName}";
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            _logger?.LogError(ex, "Error saving student photo");
+        //            var notifyObj = new { type = "error", message = "خطا هنگام ذخیره تصویر. لطفاً دوباره تلاش کنید." };
+        //            TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyObj);
+        //            ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
+        //            return View(model);
+        //        }
+        //    }
+
+        //    // 4) ساخت Student بر اساس ViewModel (با نگهداری بقیه فیلدها بدون تغییر)
+        //    var student = new Student
+        //    {
+        //        FirstName = model.FirstName,
+        //        LastName = model.LastName,
+        //        FatherName = model.FatherName,
+        //        SchoolName = model.SchoolName,
+        //        PhotoPath = photoPath,
+        //        Grade = model.Grade,
+        //        CoachName = model.CoachName,
+        //        NationalCode = model.NationalCode,
+        //        InactiveReason = model.InactiveReason,
+        //        WorkgroupName = model.WorkgroupName,
+        //        ConsentForm = model.ConsentForm,
+        //        StudentInterviewForm = model.StudentInterviewForm,
+        //        ParentInterviewForm = model.ParentInterviewForm,
+        //        TalentTest = model.TalentTest,
+        //        PsychologyForm = model.PsychologyForm,
+        //        IQTest = model.IQTest,
+        //        WarkTest = model.WarkTest,
+        //        ClassId = model.ClassId,
+        //        IsActive = model.IsActive,
+        //        // === new fields ===
+        //        PaymentStatus = model.PaymentStatus,
+
+        //        // === new fields (جدید اضافه‌شده) ===
+        //        HomeAddress = model.HomeAddress,
+        //        OwnershipStatus = model.OwnershipStatus,
+        //        StudentPhone = model.StudentPhone,
+        //        FatherPhone = model.FatherPhone,
+        //        MotherPhone = model.MotherPhone,
+        //        IsParentInEitaa = model.IsParentInEitaa,
+        //        FatherJob = model.FatherJob,
+        //        MotherJob = model.MotherJob,
+        //        LastAverageScore = model.LastAverageScore,
+        //        LastAverageDescription = model.LastAverageDescription,
+        //        // تاریخ‌ها (در صورت وجود)
+        //        BirthDate = birthDate,
+        //        EntryDate = entryDate
+        //        // DeletedAt, DeletedBy, RowVersion, Attendances handled by DB or left null
+        //    };
+
+        //    // 5) ذخیره و ارسال SignalR و پیام به کاربر
+        //    try
+        //    {
+        //        _db.Students.Add(student);
+        //        await _db.SaveChangesAsync();
+
+        //        // اگر نیاز به نام کلاس در DTO داریم، آن را بارگزاری کن
+        //        string className = "";
+        //        if (student.ClassId.HasValue)
+        //        {
+        //            className = await _db.Classes
+        //                                  .Where(c => c.Id == student.ClassId.Value)
+        //                                  .Select(c => c.Name)
+        //                                  .FirstOrDefaultAsync() ?? "";
+        //        }
+
+        //        // آماده‌سازی DTO کامل برای SignalR
+        //        var dto = new
+        //        {
+        //            id = student.Id,
+        //            firstName = student.FirstName,
+        //            lastName = student.LastName,
+        //            fatherName = student.FatherName,
+        //            nationalCode = student.NationalCode,
+        //            grade = student.Grade,
+        //            schoolName = student.SchoolName,
+        //            coachName = student.CoachName,
+        //            photo = student.PhotoPath ?? "/uploads/students/default.png",
+        //            isActive = student.IsActive,
+        //            className = className,
+        //            inactiveReason = student.InactiveReason,
+        //            workgroupName = student.WorkgroupName,
+        //            consentForm = (byte)student.ConsentForm,
+        //            studentInterviewForm = (byte)student.StudentInterviewForm,
+        //            parentInterviewForm = (byte)student.ParentInterviewForm,
+        //            talentTest = (byte)student.TalentTest,
+        //            psychologyForm = (byte)student.PsychologyForm,
+        //            iqTest = (byte)student.IQTest,
+        //            warkTest = (byte)student.WarkTest,
+        //            paymentStatus = (byte)student.PaymentStatus,
+        //            birthDate = PersianDateConverter.ToShamsiString(student.BirthDate),
+        //            entryDate = PersianDateConverter.ToShamsiString(student.EntryDate)
+        //        };
+
+        //        // ارسال SignalR (اگر شکست خورد، فقط لاگ کن)
+        //        try
+        //        {
+        //            await _hub.Clients.All.SendAsync("StudentCreated", dto);
+        //        }
+        //        catch (Exception hubEx)
+        //        {
+        //            _logger?.LogError(hubEx, "Failed to broadcast StudentCreated for id {Id}", student.Id);
+        //        }
+
+        //        // ذخیره پیام موفقیت در TempData به صورت JSON امن (NotifyJson)
+        //        var notifySuccess = new { type = "success", message = "اطلاعات دانش‌آموز جدید با موفقیت ثبت شد." };
+        //        TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifySuccess);
+
+        //        return RedirectToAction(nameof(Index));
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        _logger?.LogError(dbEx, "DbUpdateException while creating student");
+        //        var notifyObj = new { type = "error", message = "خطا هنگام ذخیره‌سازی در دیتابیس. لطفاً بعداً تلاش کنید." };
+        //        TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyObj);
+        //        ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
+        //        return View(model);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger?.LogError(ex, "Exception while creating student");
+        //        var notifyObj = new { type = "error", message = "یک خطای داخلی رخ داد. لطفاً بعداً تلاش کنید." };
+        //        TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyObj);
+        //        ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
+        //        return View(model);
+        //    }
+        //}
+
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> Create(Data.VModels.StudentCreateViewModel model, IFormFile? Photo)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        TempData["NotifyJson"] = JsonSerializer.Serialize(
+        //            new { type = "error", message = "اطلاعات وارد شده معتبر نیست. لطفاً کلیه مقادیر را بررسی کنید." });
+
+        //        ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
+        //        return View(model);
+        //    }
+
+        //    DateTime? birthDate = null;
+        //    DateTime? entryDate = null;
+
+        //    if (!string.IsNullOrWhiteSpace(model.BirthDateShamsi))
+        //    {
+        //        if (!PersianDateConverter.TryParseShamsiToDate(model.BirthDateShamsi.Trim(), out var bd))
+        //            ModelState.AddModelError(nameof(model.BirthDateShamsi), "فرمت تاریخ تولد نامعتبر است");
+        //        else
+        //            birthDate = bd;
+        //    }
+
+        //    if (!string.IsNullOrWhiteSpace(model.EntryDateShamsi))
+        //    {
+        //        if (!PersianDateConverter.TryParseShamsiToDate(model.EntryDateShamsi.Trim(), out var ed))
+        //            ModelState.AddModelError(nameof(model.EntryDateShamsi), "فرمت تاریخ ورود نامعتبر است");
+        //        else
+        //            entryDate = ed;
+        //    }
+
+        //    if (!ModelState.IsValid)
+        //    {
+        //        TempData["NotifyJson"] = JsonSerializer.Serialize(
+        //            new { type = "error", message = "فرم شامل خطا است." });
+
+        //        ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
+        //        return View(model);
+        //    }
+
+        //    // ===== Photo =====
+        //    string photoPath = "/uploads/students/default.png";
+
+        //    if (Photo != null && Photo.Length > 0)
+        //    {
+        //        var ext = Path.GetExtension(Photo.FileName).ToLowerInvariant();
+        //        var allowedExt = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+
+        //        if (!allowedExt.Contains(ext))
+        //        {
+        //            TempData["NotifyJson"] = JsonSerializer.Serialize(
+        //                new { type = "error", message = "فرمت تصویر مجاز نیست." });
+
+        //            ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
+        //            return View(model);
+        //        }
+
+        //        var uploads = Path.Combine(_env.WebRootPath!, "uploads", "students");
+        //        Directory.CreateDirectory(uploads);
+
+        //        var fileName = $"{Guid.NewGuid()}{ext}";
+        //        var filePath = Path.Combine(uploads, fileName);
+
+        //        await using var fs = new FileStream(filePath, FileMode.Create);
+        //        await Photo.CopyToAsync(fs);
+
+        //        photoPath = $"/uploads/students/{fileName}";
+        //    }
+
+        //    var student = new Student
+        //    {
+        //        FirstName = model.FirstName,
+        //        LastName = model.LastName,
+        //        FatherName = model.FatherName,
+        //        SchoolName = model.SchoolName,
+        //        Grade = model.Grade,
+        //        CoachName = model.CoachName,
+        //        NationalCode = model.NationalCode,
+
+        //        BirthDate = birthDate,
+        //        EntryDate = entryDate,
+        //        PhotoPath = photoPath,
+
+        //        HomeAddress = model.HomeAddress,
+        //        OwnershipStatus = model.OwnershipStatus,
+        //        StudentPhone = model.StudentPhone,
+        //        FatherPhone = model.FatherPhone,
+        //        MotherPhone = model.MotherPhone,
+        //        IsParentInEitaa = model.IsParentInEitaa,
+        //        FatherJob = model.FatherJob,
+        //        MotherJob = model.MotherJob,
+        //        LastAverageScore = model.LastAverageScore,
+        //        LastAverageDescription = model.LastAverageDescription,
+
+        //        WorkgroupName = model.WorkgroupName,
+        //        PaymentStatus = model.PaymentStatus,
+        //        ConsentForm = model.ConsentForm,
+        //        StudentInterviewForm = model.StudentInterviewForm,
+        //        ParentInterviewForm = model.ParentInterviewForm,
+        //        TalentTest = model.TalentTest,
+        //        PsychologyForm = model.PsychologyForm,
+        //        IQTest = model.IQTest,
+        //        WarkTest = model.WarkTest,
+
+        //        ClassId = model.ClassId,
+        //        IsActive = model.IsActive
+        //    };
+
+        //    _db.Students.Add(student);
+        //    await _db.SaveChangesAsync();
+
+        //    TempData["NotifyJson"] = JsonSerializer.Serialize(
+        //        new { type = "success", message = "اطلاعات دانش‌آموز جدید با موفقیت ثبت شد." });
+
+        //    return RedirectToAction(nameof(Index));
+        //}
+
+
+        // ---------------- Edit (GET) ----------------
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Data.VModels.StudentCreateViewModel model, IFormFile? Photo)
         {
-            // 1) اعتبارسنجی اولیه مدل
             if (!ModelState.IsValid)
             {
-                var notifyInvalid = new { type = "error", message = "فرم معتبر نیست. لطفاً مقادیر را بررسی کنید." };
-                TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyInvalid);
+                TempData["NotifyJson"] = JsonSerializer.Serialize(
+                    new { type = "error", message = "اطلاعات وارد شده معتبر نیست. لطفاً کلیه مقادیر را بررسی کنید." });
 
-                // در صورت وجود SelectList ها مجدداً آنها را لود کن (در صورت نیاز)
                 ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
                 return View(model);
             }
 
-            // 2) اعتبارسنجی و پارس تاریخ‌های شمسی (BirthDateShamsi و EntryDateShamsi)
             DateTime? birthDate = null;
             DateTime? entryDate = null;
 
             if (!string.IsNullOrWhiteSpace(model.BirthDateShamsi))
             {
                 if (!PersianDateConverter.TryParseShamsiToDate(model.BirthDateShamsi.Trim(), out var bd))
-                {
-                    ModelState.AddModelError(nameof(model.BirthDateShamsi), "فرمت تاریخ تولد نامعتبر است — از قالب YYYY/MM/DD استفاده کنید (مثال: 1389/02/25).");
-                }
+                    ModelState.AddModelError(nameof(model.BirthDateShamsi), "فرمت تاریخ تولد نامعتبر است");
                 else
-                {
                     birthDate = bd;
-                }
             }
 
             if (!string.IsNullOrWhiteSpace(model.EntryDateShamsi))
             {
                 if (!PersianDateConverter.TryParseShamsiToDate(model.EntryDateShamsi.Trim(), out var ed))
-                {
-                    ModelState.AddModelError(nameof(model.EntryDateShamsi), "فرمت تاریخ ورود نامعتبر است — از قالب YYYY/MM/DD استفاده کنید (مثال: 1403/07/01).");
-                }
+                    ModelState.AddModelError(nameof(model.EntryDateShamsi), "فرمت تاریخ ورود نامعتبر است");
                 else
-                {
                     entryDate = ed;
-                }
             }
 
-            // اگر خطای مدل (مانند فرمت تاریخ) وجود دارد، دوباره ویو را بازگردان
             if (!ModelState.IsValid)
             {
-                // پیام کلی جهت نمایش با Swal (در صورت نیاز)
-                TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(new { type = "error", message = "فرم شامل مقادیر نامعتبر است. لطفاً خطاها را اصلاح کنید." });
+                TempData["NotifyJson"] = JsonSerializer.Serialize(
+                    new { type = "error", message = "فرم شامل خطا است." });
 
                 ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
                 return View(model);
             }
 
-            // 3) پردازش تصویر (اختیاری اما امن)
-            string? photoPath = null;
+            // ===== Photo =====
+            string photoPath = "/uploads/students/default.png";
+
             if (Photo != null && Photo.Length > 0)
             {
+                var ext = Path.GetExtension(Photo.FileName).ToLowerInvariant();
                 var allowedExt = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-                var ext = Path.GetExtension(Photo.FileName)?.ToLowerInvariant();
-                if (string.IsNullOrEmpty(ext) || !allowedExt.Contains(ext))
+
+                if (!allowedExt.Contains(ext))
                 {
-                    var notifyObj = new { type = "error", message = "پسوند تصویر نامعتبر است. (jpg, jpeg, png, webp)" };
-                    TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyObj);
+                    TempData["NotifyJson"] = JsonSerializer.Serialize(
+                        new { type = "error", message = "فرمت تصویر مجاز نیست." });
+
                     ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
                     return View(model);
                 }
 
-                const long maxBytes = 2 * 1024 * 1024; // 2MB
-                if (Photo.Length > maxBytes)
-                {
-                    var notifyObj = new { type = "error", message = "حجم تصویر بیش از حد مجاز است (حداکثر 2 مگابایت)." };
-                    TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyObj);
-                    ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
-                    return View(model);
-                }
+                var uploads = Path.Combine(_env.WebRootPath!, "uploads", "students");
+                Directory.CreateDirectory(uploads);
 
-                try
-                {
-                    var uploads = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", "students");
-                    if (!Directory.Exists(uploads)) Directory.CreateDirectory(uploads);
+                var fileName = $"{Guid.NewGuid()}{ext}";
+                var filePath = Path.Combine(uploads, fileName);
 
-                    var fileName = $"{Guid.NewGuid()}{ext}";
-                    var filePath = Path.Combine(uploads, fileName);
+                await using var fs = new FileStream(filePath, FileMode.Create);
+                await Photo.CopyToAsync(fs);
 
-                    await using (var fs = new FileStream(filePath, FileMode.Create))
-                    {
-                        await Photo.CopyToAsync(fs);
-                    }
-
-                    photoPath = $"/uploads/students/{fileName}";
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogError(ex, "Error saving student photo");
-                    var notifyObj = new { type = "error", message = "خطا هنگام ذخیره تصویر. لطفاً دوباره تلاش کنید." };
-                    TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyObj);
-                    ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
-                    return View(model);
-                }
+                photoPath = $"/uploads/students/{fileName}";
             }
 
-            // 4) ساخت Student بر اساس ViewModel (با نگهداری بقیه فیلدها بدون تغییر)
             var student = new Student
             {
                 FirstName = model.FirstName,
                 LastName = model.LastName,
                 FatherName = model.FatherName,
                 SchoolName = model.SchoolName,
-                PhotoPath = photoPath,
                 Grade = model.Grade,
                 CoachName = model.CoachName,
                 NationalCode = model.NationalCode,
-                InactiveReason = model.InactiveReason,
-                WorkgroupName = model.WorkgroupName,
-                ConsentForm = model.ConsentForm,
-                StudentInterviewForm = model.StudentInterviewForm,
-                ParentInterviewForm = model.ParentInterviewForm,
-                TalentTest = model.TalentTest,
-                PsychologyForm = model.PsychologyForm,
-                IQTest = model.IQTest,
-                WarkTest = model.WarkTest,
-                ClassId = model.ClassId,
-                IsActive = model.IsActive,
-                // === new fields ===
-                PaymentStatus = model.PaymentStatus,
 
-                // === new fields (جدید اضافه‌شده) ===
+                BirthDate = birthDate,
+                EntryDate = entryDate,
+                PhotoPath = photoPath,
+
                 HomeAddress = model.HomeAddress,
                 OwnershipStatus = model.OwnershipStatus,
                 StudentPhone = model.StudentPhone,
@@ -394,91 +692,35 @@ namespace Attendance.Web.Controllers
                 MotherJob = model.MotherJob,
                 LastAverageScore = model.LastAverageScore,
                 LastAverageDescription = model.LastAverageDescription,
-                // تاریخ‌ها (در صورت وجود)
-                BirthDate = birthDate,
-                EntryDate = entryDate
-                // DeletedAt, DeletedBy, RowVersion, Attendances handled by DB or left null
+
+                WorkgroupName = model.WorkgroupName,
+                PaymentStatus = model.PaymentStatus,
+                ConsentForm = model.ConsentForm,
+                StudentInterviewForm = model.StudentInterviewForm,
+                ParentInterviewForm = model.ParentInterviewForm,
+                TalentTest = model.TalentTest,
+                PsychologyForm = model.PsychologyForm,
+                IQTest = model.IQTest,
+                WarkTest = model.WarkTest,
+
+                // ===== Tuition Fields =====
+                ApprovedSixMonthTuition = model.ApprovedSixMonthTuition,
+                PaidAmountSoFar = model.PaidAmountSoFar,
+
+                ClassId = model.ClassId,
+                IsActive = model.IsActive
             };
 
-            // 5) ذخیره و ارسال SignalR و پیام به کاربر
-            try
-            {
-                _db.Students.Add(student);
-                await _db.SaveChangesAsync();
+            _db.Students.Add(student);
+            await _db.SaveChangesAsync();
 
-                // اگر نیاز به نام کلاس در DTO داریم، آن را بارگزاری کن
-                string className = "";
-                if (student.ClassId.HasValue)
-                {
-                    className = await _db.Classes
-                                          .Where(c => c.Id == student.ClassId.Value)
-                                          .Select(c => c.Name)
-                                          .FirstOrDefaultAsync() ?? "";
-                }
+            TempData["NotifyJson"] = JsonSerializer.Serialize(
+                new { type = "success", message = "اطلاعات دانش‌آموز جدید با موفقیت ثبت شد." });
 
-                // آماده‌سازی DTO کامل برای SignalR
-                var dto = new
-                {
-                    id = student.Id,
-                    firstName = student.FirstName,
-                    lastName = student.LastName,
-                    fatherName = student.FatherName,
-                    nationalCode = student.NationalCode,
-                    grade = student.Grade,
-                    schoolName = student.SchoolName,
-                    coachName = student.CoachName,
-                    photo = student.PhotoPath ?? "/uploads/students/default.png",
-                    isActive = student.IsActive,
-                    className = className,
-                    inactiveReason = student.InactiveReason,
-                    workgroupName = student.WorkgroupName,
-                    consentForm = (byte)student.ConsentForm,
-                    studentInterviewForm = (byte)student.StudentInterviewForm,
-                    parentInterviewForm = (byte)student.ParentInterviewForm,
-                    talentTest = (byte)student.TalentTest,
-                    psychologyForm = (byte)student.PsychologyForm,
-                    iqTest = (byte)student.IQTest,
-                    warkTest = (byte)student.WarkTest,
-                    paymentStatus = (byte)student.PaymentStatus,
-                    birthDate = PersianDateConverter.ToShamsiString(student.BirthDate),
-                    entryDate = PersianDateConverter.ToShamsiString(student.EntryDate)
-                };
-
-                // ارسال SignalR (اگر شکست خورد، فقط لاگ کن)
-                try
-                {
-                    await _hub.Clients.All.SendAsync("StudentCreated", dto);
-                }
-                catch (Exception hubEx)
-                {
-                    _logger?.LogError(hubEx, "Failed to broadcast StudentCreated for id {Id}", student.Id);
-                }
-
-                // ذخیره پیام موفقیت در TempData به صورت JSON امن (NotifyJson)
-                var notifySuccess = new { type = "success", message = "اطلاعات دانش‌آموز جدید با موفقیت ثبت شد." };
-                TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifySuccess);
-
-                return RedirectToAction(nameof(Index));
-            }
-            catch (DbUpdateException dbEx)
-            {
-                _logger?.LogError(dbEx, "DbUpdateException while creating student");
-                var notifyObj = new { type = "error", message = "خطا هنگام ذخیره‌سازی در دیتابیس. لطفاً بعداً تلاش کنید." };
-                TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyObj);
-                ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
-                return View(model);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Exception while creating student");
-                var notifyObj = new { type = "error", message = "یک خطای داخلی رخ داد. لطفاً بعداً تلاش کنید." };
-                TempData["NotifyJson"] = System.Text.Json.JsonSerializer.Serialize(notifyObj);
-                ViewBag.Classes = new SelectList(await _db.Classes.AsNoTracking().ToListAsync(), "Id", "Name");
-                return View(model);
-            }
+            return RedirectToAction(nameof(Index));
         }
 
-        // ---------------- Edit (GET) ----------------
+
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
