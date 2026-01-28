@@ -16,7 +16,7 @@ module.exports = {
     theme: {
         extend: {
             fontFamily: {
-                yekan: ['IRANYekanXFaNum-Regular', 'sans-serif'],
+                yekan: ['IRANSansWeb_Light', 'sans-serif'],
             },
             colors: {
                 slate: colors.slate,

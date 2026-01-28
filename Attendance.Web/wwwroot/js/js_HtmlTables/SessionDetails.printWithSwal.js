@@ -164,7 +164,7 @@
                 <style>
                        @font-face {
                             font-family: 'IRANYekan';
-                            src: url('/fonts/IRANYekanXFaNum-Regular.woff2') format('truetype');
+                            src: url('/fonts/IRANSansWeb_Light.woff2') format('truetype');
                         }
                     body { font-family: IRANYekan; margin: 20px; }
                     tr:nth-child(even){ background:#fafafa }

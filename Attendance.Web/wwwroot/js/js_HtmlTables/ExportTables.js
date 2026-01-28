@@ -160,7 +160,7 @@
                     <style>
                         @font-face {
                             font-family: 'IRANYekan';
-                            src: url('/fonts/IRANYekanXFaNum-Regular.woff2') format('truetype');
+                            src: url('/fonts/IRANSansWeb_Light.woff2') format('truetype');
                         }
                         body { font-family: 'IRANYekan', sans-serif; direction: rtl; margin: 20px; color: #111; }
                         table { width: 100%; border-collapse: collapse; font-size: 13px; }
